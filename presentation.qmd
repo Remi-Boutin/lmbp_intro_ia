@@ -1019,6 +1019,163 @@ Avec GPT-3 apparaît l'**apprentissage en contexte** (*in-context learning*) : l
 :::
 
 
+# Des LLM aux agents
+
+---
+
+### Qu'est-ce qu'un agent ?
+
+Un LLM seul est une fonction **texte → texte** :
+
+- ses connaissances sont **figées** à la fin de l'entraînement
+- il ne peut **pas agir** : ni chercher sur le web, ni lire un fichier, ni exécuter du code
+- il répond **en une fois**, sans vérifier son travail
+
+::: {.fragment}
+::: {.callout-note title="Définition"}
+Un **agent** est un LLM placé dans une **boucle**, qui peut utiliser des **outils** pour agir sur son environnement et observer le résultat, jusqu'à atteindre un **objectif**.
+
+$$
+\text{Agent} = \text{LLM} + \text{outils} + \text{boucle} + \text{mémoire}
+$$
+:::
+:::
+
+::: {.fragment}
+**Exemples :**
+
+- **Assistants de code** (Claude Code, Cursor...) : lisent le projet, modifient des fichiers, lancent les tests
+- **Recherche approfondie** : enchaînent des dizaines de recherches web puis rédigent une synthèse
+- **Assistants personnels** : lisent les mails, consultent l'agenda, réservent un créneau
+:::
+
+---
+
+### La boucle agentique
+
+:::: {.columns}
+::: {.column width="40%"}
+```{mermaid}
+%%| fig-width: 3.5
+flowchart TB
+    U["Objectif de l'utilisateur"] --> R["Raisonner<br/>(le LLM réfléchit)"]
+    R --> A["Agir<br/>(appel d'un outil)"]
+    A --> O["Observer<br/>(résultat de l'outil)"]
+    O --> R
+    R --> F["Réponse finale"]
+```
+:::
+
+::: {.column width="60%"}
+À chaque tour, le LLM lit **tout l'historique** et décide :
+
+- soit d'**appeler un outil**,
+- soit de **répondre** : la boucle s'arrête.
+
+Ce schéma s'appelle **ReAct** (*Reasoning + Acting*, Yao et al., 2022).
+:::
+::::
+
+::: {.fragment}
+**Exemple :** « Faut-il prendre un parapluie demain à Clermont-Ferrand ? »
+
+1. *Raisonner* : « Je dois connaître la météo de demain. »
+2. *Agir* : `meteo(ville="Clermont-Ferrand", jour="demain")`
+3. *Observer* : `{"pluie": 80%, "temp": 12°C}`
+4. *Raisonner* : « 80 % de pluie, c'est élevé. »
+5. *Répondre* : « Oui, prenez un parapluie. »
+:::
+
+:::{.notes}
+- La différence avec un chatbot : le nombre de tours n'est pas fixé à l'avance, c'est le modèle qui décide quand il a fini.
+:::
+
+---
+
+### Comment un LLM utilise un outil ?
+
+Le LLM ne fait toujours que **prédire le prochain token**. Tout passe par du texte :
+
+::: {.fragment}
+**1. On décrit les outils dans le prompt** : un nom, une description, des paramètres
+
+```json
+{"name": "meteo",
+ "description": "Donne la météo prévue pour une ville et un jour",
+ "parameters": {"ville": "string", "jour": "string"}}
+```
+:::
+
+::: {.fragment}
+**2. Le modèle génère un appel** sous forme de texte structuré (au lieu d'une réponse)
+
+```json
+{"tool": "meteo", "arguments": {"ville": "Clermont-Ferrand", "jour": "demain"}}
+```
+:::
+
+::: {.fragment}
+**3. Un programme classique exécute l'appel** et **ajoute le résultat** au contexte, puis on relance le modèle.
+:::
+
+::: {.fragment}
+::: {.callout-tip}
+Formellement, l'agent échantillonne sa prochaine action selon $p_\theta(\text{action} \mid \text{historique})$ : c'est la génération autorégressive, où l'historique contient aussi les résultats des outils. Les modèles sont **fine-tunés** pour savoir quand et comment appeler un outil.
+:::
+:::
+
+:::{.notes}
+- Le protocole MCP (*Model Context Protocol*) standardise la façon de brancher des outils (bases de données, API, fichiers...) sur un agent.
+:::
+
+---
+
+### Mémoire et contexte
+
+**Mémoire à court terme = la fenêtre de contexte**
+
+- Tout l'historique (demande, raisonnements, appels d'outils, résultats) est relu à chaque tour
+- Elle est **limitée** (coût $O(n^2)$ de l'attention) et se remplit vite : un fichier lu, une page web...
+- Solution : **résumer** l'historique quand il devient trop long
+
+::: {.fragment}
+**Mémoire à long terme = stockage externe**
+
+- Fichiers de notes, base de données : l'agent y écrit et les relit via des outils
+- **Recherche par similarité** (*RAG, Retrieval-Augmented Generation*) : on découpe des documents en morceaux, on calcule leurs **embeddings**, et on ne met dans le contexte que les morceaux les plus proches de la question
+
+$$
+\text{score}(\text{question}, \text{doc}) = \cos\big(\mathbf{e}(\text{question}), \mathbf{e}(\text{doc})\big)
+$$
+:::
+
+::: {.fragment}
+On retrouve les **embeddings** du début de la présentation : des textes proches en sens ont des vecteurs proches.
+:::
+
+---
+
+### Multi-agents et limites
+
+**Systèmes multi-agents :** un agent **orchestrateur** découpe la tâche et la confie à des **sous-agents** spécialisés, qui travaillent en parallèle et lui renvoient un résumé.
+
+- Chaque sous-agent a **son propre contexte** → on dépasse la limite d'une seule fenêtre
+- Ils communiquent en **texte** : consignes de l'orchestrateur, rapports des sous-agents
+
+::: {.fragment}
+**Limites :**
+
+- **Coût** : chaque tour relit tout le contexte, des centaines de milliers de tokens pour une tâche
+- **Sécurité** : un texte malveillant lu par l'agent (page web, mail) peut contenir des instructions (*injection de prompt*)
+:::
+
+::: {.fragment}
+::: {.callout-important}
+D'où l'importance de **vérifier** (tests, relecture) et de garder un **humain dans la boucle** pour les actions irréversibles.
+:::
+:::
+
+
 # Fin de la présentation
 
 
