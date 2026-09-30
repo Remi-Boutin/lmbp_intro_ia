@@ -2,7 +2,19 @@
   "permissions": {
     "allow": [
       "Read(//home/reboutin/.cache/huggingface/hub/**)",
-      "Bash(/home/reboutin/miniconda3/envs/huggingface/bin/python -c \"import transformers, torch; print\\(transformers.__version__, torch.__version__\\)\")"
+      "Bash(/home/reboutin/miniconda3/envs/huggingface/bin/python -c \"import transformers, torch; print\\(transformers.__version__, torch.__version__\\)\")",
+      "Bash(mkdir -p /tmp/claude-1000/-home-reboutin-Notes-LMBP-intro-IA/32647791-f87b-43c7-ae6c-8097a49236b7/scratchpad/render)",
+      "Bash(cp -r presentation.qmd styles.css images /tmp/claude-1000/-home-reboutin-Notes-LMBP-intro-IA/32647791-f87b-43c7-ae6c-8097a49236b7/scratchpad/render/)",
+      "Bash(QUARTO_PYTHON=/home/reboutin/miniconda3/envs/huggingface/bin/python quarto render presentation.qmd --no-cache)",
+      "Bash(/home/reboutin/miniconda3/envs/huggingface/bin/jupyter kernelspec *)",
+      "Bash(sed -i '2i jupyter: huggingface' presentation.qmd)",
+      "Bash(quarto render *)",
+      "Bash(grep -v \"^\\\\s*$\")",
+      "Bash(grep -n \"^<div>$\" /home/reboutin/Notes/LMBP_intro_IA/presentation.qmd)",
+      "Read(//tmp/**)",
+      "Bash(/home/reboutin/miniconda3/envs/huggingface/bin/python -c ' *)",
+      "Bash(grep -n -E \"^# |^### |^\\\\`\\\\`\\\\`\" presentation.qmd)",
+      "Bash(cp /home/reboutin/Notes/LMBP_intro_IA/presentation.qmd /tmp/claude-1000/-home-reboutin-Notes-LMBP-intro-IA/32647791-f87b-43c7-ae6c-8097a49236b7/scratchpad/render/)"
     ]
   }
 }

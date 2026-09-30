@@ -49,6 +49,7 @@ format:
               });
             });
             </script>
+jupyter: huggingface            
 ---
 
 ---
@@ -354,7 +355,7 @@ $$
 \mathbf{h}_t = \mathbf{o}_t \odot \tanh(\mathbf{c}_t) \quad \text{où } \mathbf{o}_t = \sigma(\mathbf{W}_o \cdot [\mathbf{h}_{t-1}, \mathbf{x}_t] + \mathbf{b}_o)
 $$
 
-<div>
+</div>
 ---
 
 ### Limitations des RNN/LSTM
@@ -544,6 +545,346 @@ avec $\theta = \{\mathbf{W}_Q, \mathbf{W}_K, \mathbf{W}_V\}$.
 - $\mathbf{v}_i = \mathbf{x_i} \mathbf{W}_V$ représente le contenu de l'information de la position $i$.
 
 
+# Du mécanisme d'attention au Transformer
+
+---
+
+### Pourquoi diviser par $\sqrt{d_k}$ ?
+
+Supposons que les coordonnées de $\mathbf{q}$ et $\mathbf{k}$ soient indépendantes, de moyenne $0$ et de variance $1$. Alors :
+
+$$
+\mathbb{E}\left[\mathbf{q}^\top \mathbf{k}\right] = \sum_{j=1}^{d_k} \mathbb{E}[q_j]\,\mathbb{E}[k_j] = 0,
+\qquad
+\text{Var}\left(\mathbf{q}^\top \mathbf{k}\right) = \sum_{j=1}^{d_k} \text{Var}(q_j k_j) = d_k
+$$
+
+::: {.fragment}
+**Conséquence :** avec $d_k = 64$, les scores sont de l'ordre de $\pm 8$, et la softmax devient presque un $\arg\max$ :
+
+$$
+\text{softmax}(8, 0, -8) \approx (0.9997,\ 0.0003,\ 0.0000)
+$$
+
+Les dérivées de la softmax sont alors quasi nulles : **le gradient ne passe plus**.
+:::
+
+::: {.fragment}
+::: {.callout-note title="Solution"}
+En divisant par $\sqrt{d_k}$, on ramène la variance des scores à $1$ :
+$\text{Var}\left(\frac{\mathbf{q}^\top \mathbf{k}}{\sqrt{d_k}}\right) = 1$, quelle que soit la dimension.
+:::
+:::
+
+:::{.notes}
+- Rappel : la dérivée de la softmax est $\frac{\partial \alpha_i}{\partial e_j} = \alpha_i(\delta_{ij} - \alpha_j)$, qui tend vers 0 quand un des $\alpha$ tend vers 1.
+:::
+
+---
+
+### Attention multi-têtes (multi-head attention)
+
+**Problème :** une seule attention = une seule façon de « regarder » la phrase. Or un mot entretient plusieurs types de relations avec les autres :
+
+- "chat" ↔ "noir" : relation **adjectif / nom**
+- "chat" ↔ "dort" : relation **sujet / verbe**
+- "elle" ↔ "Alice" : relation de **coréférence**
+
+::: {.fragment}
+::: {.callout-note title="Définition"}
+On calcule $h$ attentions **en parallèle** (les *têtes*), chacune avec ses propres paramètres, puis on concatène les résultats :
+
+$$
+\text{head}_i = \text{Attention}(\mathbf{X}\color{darkred}{\mathbf{W}_Q^{(i)}}, \mathbf{X}\color{darkred}{\mathbf{W}_K^{(i)}}, \mathbf{X}\color{darkred}{\mathbf{W}_V^{(i)}}) \in \mathbb{R}^{n \times d_v}
+$$
+
+$$
+\text{MultiHead}(\mathbf{X}) = \text{Concat}(\text{head}_1, \dots, \text{head}_h)\,\color{darkred}{\mathbf{W}_O} \in \mathbb{R}^{n \times d_{model}}
+$$
+:::
+:::
+
+::: {.fragment}
+<button class="collapse-button">▶ Afficher les dimensions</button>
+<div class="collapse-content">
+- $\mathbf{W}_Q^{(i)}, \mathbf{W}_K^{(i)} \in \mathbb{R}^{d_{model} \times d_k}$, $\quad \mathbf{W}_V^{(i)} \in \mathbb{R}^{d_{model} \times d_v}$, $\quad \mathbf{W}_O \in \mathbb{R}^{h d_v \times d_{model}}$
+- En pratique $d_k = d_v = d_{model} / h$ : chaque tête travaille dans un sous-espace plus petit.
+- Nombre de paramètres : $3 \times h \times d_{model} \times \frac{d_{model}}{h} + d_{model}^2 = 4\, d_{model}^2$, **indépendant de $h$**.
+- Exemple : GPT-2 (small), $d_{model} = 768$, $h = 12$ têtes de dimension $64$.
+</div>
+:::
+
+:::{.notes}
+- Chaque tête peut se spécialiser (syntaxe, coréférence, position...) : cela émerge de l'apprentissage, ce n'est pas imposé.
+- $\mathbf{W}_O$ remélange l'information des différentes têtes.
+:::
+
+---
+
+### Encodage positionnel : le problème
+
+L'auto-attention est **équivariante par permutation** : si on mélange les tokens, la sortie est mélangée de la même façon.
+
+::: {.callout-note title="Propriété"}
+Pour toute matrice de permutation $\mathbf{P} \in \mathbb{R}^{n \times n}$ :
+$$
+\text{SelfAttention}(\mathbf{P}\mathbf{X}) = \mathbf{P}\ \text{SelfAttention}(\mathbf{X})
+$$
+:::
+
+<button class="collapse-button">▶ Afficher la preuve</button>
+<div class="collapse-content">
+Avec $\mathbf{X}' = \mathbf{P}\mathbf{X}$, on a $\mathbf{Q}' = \mathbf{P}\mathbf{Q}$, $\mathbf{K}' = \mathbf{P}\mathbf{K}$, $\mathbf{V}' = \mathbf{P}\mathbf{V}$. Donc
+$$
+\text{softmax}\left(\frac{\mathbf{P}\mathbf{Q}\mathbf{K}^\top\mathbf{P}^\top}{\sqrt{d_k}}\right)\mathbf{P}\mathbf{V}
+= \mathbf{P}\,\text{softmax}\left(\frac{\mathbf{Q}\mathbf{K}^\top}{\sqrt{d_k}}\right)\mathbf{P}^\top\mathbf{P}\mathbf{V}
+= \mathbf{P}\,\text{softmax}\left(\frac{\mathbf{Q}\mathbf{K}^\top}{\sqrt{d_k}}\right)\mathbf{V}
+$$
+car la softmax, appliquée ligne par ligne, commute avec les permutations de lignes et de colonnes, et $\mathbf{P}^\top\mathbf{P} = \mathbf{I}$.
+</div>
+
+::: {.fragment}
+**Conséquence :** "Le chat mange la souris" et "La souris mange le chat" produisent **les mêmes représentations** pour chaque mot. Le modèle ne connaît pas l'ordre des mots !
+:::
+
+::: {.fragment}
+::: {.callout-tip title="Solution"}
+On **ajoute** à chaque embedding de token un vecteur $\mathbf{p}_t \in \mathbb{R}^{d_{model}}$ qui dépend de sa position $t$ :
+$$
+\mathbf{x}_t = \mathbf{e}(\text{token}_t) + \mathbf{p}_t
+$$
+:::
+:::
+
+---
+
+### Encodage positionnel : les solutions
+
+**1. Sinusoïdal** (Transformer original, 2017) : $\mathbf{p}_t$ est fixé, pour $i = 0, \dots, d_{model}/2 - 1$ :
+
+$$
+p_{t, 2i} = \sin(\omega_i t), \qquad p_{t, 2i+1} = \cos(\omega_i t), \qquad \omega_i = \frac{1}{10000^{2i/d_{model}}}
+$$
+
+Chaque paire de coordonnées tourne à une fréquence différente, comme les aiguilles d'une horloge.
+
+::: {.fragment}
+**Propriété :** la position $t + k$ s'obtient à partir de $t$ par une **rotation** qui ne dépend que de $k$ :
+
+$$
+\begin{pmatrix} \sin(\omega_i (t+k)) \\ \cos(\omega_i (t+k)) \end{pmatrix}
+=
+\begin{pmatrix} \cos(\omega_i k) & \sin(\omega_i k) \\ -\sin(\omega_i k) & \cos(\omega_i k) \end{pmatrix}
+\begin{pmatrix} \sin(\omega_i t) \\ \cos(\omega_i t) \end{pmatrix}
+$$
+
+Le modèle peut donc facilement raisonner en **position relative**.
+:::
+
+::: {.fragment}
+**2. Appris** (GPT, BERT) : $\mathbf{p}_1, \dots, \mathbf{p}_{n_{max}}$ sont des paramètres, estimés comme les embeddings. Limite : pas de séquence plus longue que $n_{max}$.
+
+**3. Rotatif, *RoPE*** (Llama, Mistral...) : on applique la rotation directement à $\mathbf{q}_t$ et $\mathbf{k}_s$, de sorte que le score $\mathbf{q}_t^\top \mathbf{k}_s$ ne dépende que de $t - s$.
+:::
+
+---
+
+### Un bloc Transformer
+
+Un bloc = **attention multi-têtes** + **MLP**, chacun suivi d'une **connexion résiduelle** et d'une **normalisation**.
+
+:::: {.columns}
+::: {.column width="35%"}
+```{mermaid}
+%%| fig-width: 3
+flowchart BT
+    X["X (n × d_model)"] --> A["Attention multi-têtes"]
+    A --> N1(("⊕")) --> L1["LayerNorm"]
+    X -- résiduel --> N1
+    L1 --> F["MLP"]
+    F --> N2(("⊕")) --> L2["LayerNorm"]
+    L1 -- résiduel --> N2
+    L2 --> Y["Y (n × d_model)"]
+```
+:::
+
+::: {.column width="65%"}
+$$
+\begin{aligned}
+\mathbf{H} &= \text{LayerNorm}\big(\mathbf{X} + \text{MultiHead}(\mathbf{X})\big) \\
+\mathbf{Y} &= \text{LayerNorm}\big(\mathbf{H} + \text{MLP}(\mathbf{H})\big)
+\end{aligned}
+$$
+
+- **Attention** : les tokens **échangent** de l'information entre eux
+- **MLP** : chaque token est transformé **indépendamment**, avec les mêmes poids
+- **Entrée et sortie ont la même taille** $n \times d_{model}$ : on peut **empiler** $L$ blocs (12 pour GPT-2 small, 96 pour GPT-3)
+:::
+::::
+
+<button class="collapse-button">▶ Afficher les équations</button>
+<div class="collapse-content">
+**MLP** (appliqué à chaque ligne $\mathbf{h} \in \mathbb{R}^{d_{model}}$ de $\mathbf{H}$) :
+$$
+\text{MLP}(\mathbf{h}) = \sigma(\mathbf{h}\mathbf{W}_1 + \mathbf{b}_1)\,\mathbf{W}_2 + \mathbf{b}_2,
+\qquad \mathbf{W}_1 \in \mathbb{R}^{d_{model} \times d_{ff}},\ \mathbf{W}_2 \in \mathbb{R}^{d_{ff} \times d_{model}}
+$$
+avec en général $d_{ff} = 4\, d_{model}$ et $\sigma$ = ReLU ou GELU.
+
+**LayerNorm** (normalise chaque token sur ses $d_{model}$ coordonnées) :
+$$
+\text{LayerNorm}(\mathbf{h}) = \boldsymbol{\gamma} \odot \frac{\mathbf{h} - \mu}{\sqrt{\sigma^2 + \varepsilon}} + \boldsymbol{\beta},
+\qquad \mu = \frac{1}{d_{model}}\sum_j h_j,\quad \sigma^2 = \frac{1}{d_{model}}\sum_j (h_j - \mu)^2
+$$
+où $\boldsymbol{\gamma}, \boldsymbol{\beta} \in \mathbb{R}^{d_{model}}$ sont appris.
+</div>
+
+:::{.notes}
+- Les modèles récents placent la LayerNorm avant l'attention et le MLP (pre-LN) : $\mathbf{H} = \mathbf{X} + \text{MultiHead}(\text{LN}(\mathbf{X}))$, plus stable à l'entraînement.
+- On retrouve le MLP vu plus tôt dans la présentation.
+:::
+
+---
+
+### Connexions résiduelles : pourquoi ça marche
+
+Chaque sous-couche calcule $\mathbf{y} = \mathbf{x} + F(\mathbf{x})$ au lieu de $\mathbf{y} = F(\mathbf{x})$.
+
+::: {.fragment}
+Pour une pile de $L$ blocs $\mathbf{x}_{l+1} = \mathbf{x}_l + F_l(\mathbf{x}_l)$, la dérivation en chaîne donne :
+
+$$
+\frac{\partial \mathbf{x}_L}{\partial \mathbf{x}_0} = \prod_{l=0}^{L-1} \left(\mathbf{I} + \frac{\partial F_l}{\partial \mathbf{x}_l}\right) = \mathbf{I} + \sum_{l} \frac{\partial F_l}{\partial \mathbf{x}_l} + \dots
+$$
+:::
+
+::: {.fragment}
+::: {.callout-note}
+Le terme $\mathbf{I}$ garantit que le gradient **atteint toujours les premières couches**, même si les $\frac{\partial F_l}{\partial \mathbf{x}_l}$ sont petits.
+
+À comparer avec le RNN : $\frac{\partial \mathbf{h}_T}{\partial \mathbf{h}_t} = \prod \frac{\partial \mathbf{h}_{s+1}}{\partial \mathbf{h}_s}$, un produit de petits termes qui **s'évanouit**.
+:::
+:::
+
+::: {.fragment}
+**Interprétation :** le vecteur $\mathbf{x}_l$ est un « flux résiduel » que chaque bloc **enrichit** par petites touches, plutôt que de le recalculer entièrement.
+:::
+
+---
+
+### Combien de paramètres ?
+
+Pour un bloc de dimension $d = d_{model}$ (en négligeant les biais et les LayerNorm) :
+
+| Composant | Matrices | Paramètres |
+|-----------|----------|-----------|
+| Attention multi-têtes | $\mathbf{W}_Q, \mathbf{W}_K, \mathbf{W}_V, \mathbf{W}_O$ | $4 d^2$ |
+| MLP ($d_{ff} = 4d$) | $\mathbf{W}_1, \mathbf{W}_2$ | $8 d^2$ |
+| **Total par bloc** | | $\mathbf{12\, d^2}$ |
+
+::: {.fragment}
+Pour $L$ blocs et un vocabulaire de taille $|\mathcal{V}|$ :
+$$
+N \approx 12\, L\, d^2 + |\mathcal{V}|\, d
+$$
+
+- **GPT-2 small** : $L = 12$, $d = 768$, $|\mathcal{V}| = 50\,257$ → $85\text{M} + 39\text{M} \approx$ **124 M**
+- **GPT-3** : $L = 96$, $d = 12\,288$ → $12 \times 96 \times 12\,288^2 \approx$ **174 Md**
+:::
+
+::: {.fragment}
+Les **deux tiers** des paramètres sont dans les MLP : on pense qu'ils stockent une grande partie des « connaissances » du modèle.
+:::
+
+---
+
+### Complexité : Transformer vs RNN
+
+Pour une séquence de $n$ tokens de dimension $d$ :
+
+| | Coût par couche | Opérations séquentielles | Chemin entre 2 tokens |
+|---|:---:|:---:|:---:|
+| **RNN** | $O(n\, d^2)$ | $O(n)$ | $O(n)$ |
+| **Auto-attention** | $O(n^2 d)$ | $O(1)$ | $O(1)$ |
+
+::: {.fragment}
+- **Opérations séquentielles $O(1)$** : toutes les positions sont calculées en même temps → exploitation des GPU
+- **Chemin $O(1)$** : deux tokens éloignés sont reliés directement par un poids $\alpha_{ij}$, sans passer par les $j - i$ états intermédiaires
+:::
+
+::: {.fragment}
+::: {.callout-important title="Le prix à payer"}
+La matrice $\mathbf{Q}\mathbf{K}^\top \in \mathbb{R}^{n \times n}$ a un coût **quadratique** en la longueur du texte : doubler le contexte multiplie par 4 le coût de l'attention. C'est pourquoi les modèles ont une **fenêtre de contexte** limitée.
+:::
+:::
+
+---
+
+### L'architecture Transformer complète
+
+*Attention Is All You Need* (Vaswani et al., 2017), conçu pour la **traduction** :
+
+:::: {.columns}
+::: {.column width="50%"}
+**Encodeur** (lit la phrase source)
+
+- Tokens → embeddings + positions
+- $L$ blocs d'auto-attention **bidirectionnelle** : chaque token voit **toute** la phrase
+- Sortie : $\mathbf{Z} \in \mathbb{R}^{n \times d_{model}}$, une représentation contextuelle de chaque token source
+:::
+
+::: {.column width="50%"}
+**Décodeur** (écrit la traduction)
+
+- Auto-attention **masquée** : un token ne voit que les tokens **précédents**
+- **Attention croisée** : les requêtes viennent du décodeur, les clés et valeurs de l'encodeur
+- Sortie : probabilité du **prochain token**
+:::
+::::
+
+::: {.fragment}
+::: {.callout-tip title="Trois familles"}
+- **Encodeur seul** → BERT (comprendre un texte)
+- **Décodeur seul** → GPT (générer du texte)
+- **Encodeur + décodeur** → T5, BART (transformer un texte en un autre)
+:::
+:::
+
+---
+
+### Attention masquée (causale)
+
+Pour **générer** du texte, le modèle ne doit pas « tricher » en regardant les mots qu'il doit prédire.
+
+On ajoute un masque $\mathbf{M} \in \mathbb{R}^{n \times n}$ **avant** la softmax :
+
+$$
+\text{Attention}(\mathbf{Q}, \mathbf{K}, \mathbf{V}) = \text{softmax}\left(\frac{\mathbf{Q}\mathbf{K}^\top}{\sqrt{d_k}} + \mathbf{M}\right)\mathbf{V},
+\qquad
+M_{ij} = \begin{cases} 0 & \text{si } j \leq i \\ -\infty & \text{si } j > i \end{cases}
+$$
+
+::: {.fragment}
+La matrice d'attention est alors **triangulaire inférieure**.
+
+| | Le | chat | noir | dort |
+|---|:---:|:---:|:---:|:---:|
+| **Le** | ✓ | ✗ | ✗ | ✗ |
+| **chat** | ✓ | ✓ | ✗ | ✗ |
+| **noir** | ✓ | ✓ | ✓ | ✗ |
+| **dort** | ✓ | ✓ | ✓ | ✓ |
+:::
+
+::: {.fragment}
+La sortie à la position $i$ ne dépend que de $\mathbf{x}_1, \dots, \mathbf{x}_i$ (et ce, à travers toutes les couches).
+
+**Avantage :** en une seule passe, on **entraîne** le modèle à prédire **les $n$ tokens en parallèle** (séquentiel avec un RNN).
+:::
+
+:::{.notes}
+- c'est un avantage lors de l'entraînement mais pas lors de la génération de texte ! 
+:::
+
 ---
 
 ![Petit historique des modèles basés sur des transformers, crédits à Hugging Face](images/transformer_historic.png){width=80%}
@@ -555,28 +896,256 @@ L'évolution des modèles de langage reposant sur les transformers s'accompagne 
 - ceux de type BART/T5 (aussi appelés transformers séquence-à-séquence)
 
 
+# GPT : le Transformer décodeur
 
 ---
 
-### Transformer
+### GPT (Generative Pre-trained Transformer)
+
+::: {.callout-note title="Architecture"}
+Une architecture GPT correspond uniquement à la partie **décodeur** du Transformer avec $L$ blocs à **attention masquée**.
+:::
+
+**Modèle de langage :** on veut estimer la probabilité d'un texte $(x_1, \dots, x_T)$. Par la formule des probabilités composées (exacte, sans hypothèse) :
+
+$$
+p(x_1, \dots, x_T) = \prod_{t=1}^{T} p(x_t \mid x_1, \dots, x_{t-1})
+$$
+
+::: {.fragment}
+GPT modélise chaque facteur $p_\theta(x_t \mid x_{<t})$ : **prédire le prochain token** sachant les précédents.
+
+C'est exactement ce que permet le masque causal : la sortie à la position $t-1$ ne voit que $x_1, \dots, x_{t-1}$.
+:::
+
+::: {.fragment}
+::: {.callout-tip title="Apprentissage auto-supervisé"}
+**Pas besoin d'annotations** : n'importe quel texte (Wikipédia, livres, web, code...) fournit ses propres exemples. Chaque texte de $T$ tokens donne $T$ problèmes de prédiction.
+:::
+:::
+
+---
+
+### Des représentations aux probabilités
+
+Soit $\mathbf{h}_t \in \mathbb{R}^{d_{model}}$ la sortie du dernier bloc à la position $t$.
+
+::: {.fragment}
+**1. Projection sur le vocabulaire** (les *logits*) :
+$$
+\mathbf{z}_t = \mathbf{h}_t \mathbf{W}_U \in \mathbb{R}^{|\mathcal{V}|}, \qquad \mathbf{W}_U \in \mathbb{R}^{d_{model} \times |\mathcal{V}|}
+$$
+Le logit $z_{t,v} = \mathbf{h}_t^\top \mathbf{e}(v)$ mesure la **similarité** entre $\mathbf{h}_t$ et l'embedding du token $v$.
+:::
+
+::: {.fragment}
+**2. Softmax :**
+$$
+p_\theta(x_{t+1} = v \mid x_{\leq t}) = \frac{\exp(z_{t,v})}{\sum_{v' \in \mathcal{V}} \exp(z_{t,v'})}
+$$
+:::
+
+::: {.fragment}
+**3. Fonction de perte** (entropie croisée, ou log-vraisemblance négative) :
+$$
+\mathcal{L}(\theta) = -\frac{1}{T} \sum_{t=1}^{T} \log p_\theta(x_t \mid x_{<t})
+$$
+
+:::
+
+---
+
+### Génération autorégressive
+
+Une fois entraîné, GPT génère du texte **token par token** :
+
+1. On donne un début de texte (le *prompt*) $x_1, \dots, x_t$
+2. Le modèle calcule la loi $p_\theta(\cdot \mid x_{\leq t})$ sur tout le vocabulaire
+3. On **choisit** un token $x_{t+1}$ selon cette loi
+4. On l'ajoute à la séquence et on recommence jusqu'à un token de fin
+
+::: {.fragment}
+**Comment choisir ?**
+
+- **Glouton** (*greedy*) : $x_{t+1} = \arg\max_v\, p_\theta(v \mid x_{\leq t})$ → déterministe, souvent répétitif
+- **Échantillonnage avec température** $\tau > 0$ :
+$$
+p_\tau(v) = \frac{\exp(z_v / \tau)}{\sum_{v'} \exp(z_{v'} / \tau)}
+\qquad
+\begin{cases}
+\tau \to 0 & \text{: glouton} \\
+\tau = 1 & \text{: loi du modèle} \\
+\tau \to \infty & \text{: loi uniforme}
+\end{cases}
+$$
+- **Top-$k$ / top-$p$** : on ne tire que parmi les $k$ tokens les plus probables, ou parmi le plus petit ensemble de tokens de probabilité cumulée $\geq p$
+:::
+
+::: {.fragment}
+::: {.callout-important}
+Le modèle ne « planifie » pas sa réponse : il prédit **un token à la fois**, en se basant uniquement sur ce qui a déjà été écrit.
+:::
+:::
+
+:::{.notes}
+- Pendant l'entraînement, tout est parallèle (masque causal). Pendant la génération, c'est séquentiel : un passage dans le réseau par token généré.
+- *KV cache* : les clés et valeurs des tokens déjà traités ne changent pas, on les garde en mémoire pour ne calculer que la nouvelle ligne de l'attention.
+:::
+
+---
+
+### De GPT-1 à GPT-3 : le passage à l'échelle
+
+| Modèle | Année | Paramètres | Blocs $L$ | $d_{model}$ | Contexte |
+|--------|-------|-----------|-------|-------------|---------|
+| GPT-1 | 2018 | 117 M | 12 | 768 | 512 |
+| GPT-2 | 2019 | 1,5 Md | 48 | 1 600 | 1 024 |
+| GPT-3 | 2020 | 175 Md | 96 | 12 288 | 2 048 |
+
+**Même architecture**, on augmente seulement la taille du modèle et des données.
+
+::: {.fragment}
+::: {.callout-note title="Lois d'échelle (Kaplan et al., 2020)"}
+La perte de test décroît comme une **loi de puissance** du nombre de paramètres $N$ (données et calcul suffisants) :
+$$
+\mathcal{L}(N) \approx \left(\frac{N_c}{N}\right)^{\alpha_N}, \qquad \alpha_N \approx 0.076
+$$
+Même type de loi pour la taille des données et la puissance de calcul : les performances sont **prévisibles**, ce qui a justifié d'investir dans des modèles toujours plus grands.
+:::
+:::
+
+::: {.fragment}
+Avec GPT-3 apparaît l'**apprentissage en contexte** (*in-context learning*) : le modèle résout une nouvelle tâche à partir de quelques exemples donnés dans le prompt, **sans modifier ses paramètres**.
+:::
+
+
+# Fin de la présentation
 
 
 
 
 
 
-### GPT
 
 
-### BERT
+# BERT : le Transformer encodeur
+
+---
+
+### BERT (Bidirectional Encoder Representations from Transformers)
+
+::: {.callout-note title="Architecture"}
+Uniquement la partie **encodeur** du Transformer : **pas de masque causal** ($\mathbf{M} = 0$), chaque token voit toute la phrase, à gauche **et** à droite.
+:::
+
+**Problème :** sans masque, prédire le prochain token est trivial : à la position $t$, le modèle voit déjà $x_{t+1}$ !
+
+::: {.fragment}
+**Objectif d'entraînement : le texte à trous** (*Masked Language Modeling*, MLM)
+
+- On tire aléatoirement un ensemble $\mathcal{M}$ de **15 %** des positions
+- On remplace ces tokens par `[MASK]` pour obtenir $\tilde{\mathbf{x}}$
+- Le modèle doit retrouver les tokens d'origine à partir du contexte **des deux côtés**
+
+"Le [MASK] noir dort tranquillement" → "chat"
+
+$$
+\mathcal{L}_{MLM}(\theta) = - \sum_{t \in \mathcal{M}} \log p_\theta(x_t \mid \tilde{\mathbf{x}})
+$$
+:::
+
+::: {.fragment}
+**Différence avec GPT :** $p_\theta(x_t \mid \tilde{\mathbf{x}})$ conditionne sur **toute** la phrase, mais BERT ne définit **pas** de loi jointe $p(x_1, \dots, x_T)$ : on ne peut pas s'en servir pour générer du texte.
+:::
+
+:::{.notes}
+- Parmi les 15 % : 80 % remplacés par [MASK], 10 % par un token aléatoire, 10 % laissés tels quels (car [MASK] n'apparaît jamais lors de l'utilisation du modèle).
+- Seules les positions masquées contribuent à la perte : BERT apprend « moins vite » par texte que GPT.
+:::
+
+---
+
+### Représentation de l'entrée
+
+Deux tokens spéciaux :
+
+- `[CLS]` au début : sa représentation finale $\mathbf{h}_{[CLS]}$ sert de **résumé** de tout le texte
+- `[SEP]` pour séparer deux phrases A et B
+
+::: {.fragment}
+`[CLS]` Le chat dort `[SEP]` Il est fatigué `[SEP]`
+
+L'embedding d'entrée de chaque token est la somme de **trois** vecteurs appris :
+$$
+\mathbf{x}_t = \underbrace{\mathbf{e}(\text{token}_t)}_{\text{token}} + \underbrace{\mathbf{p}_t}_{\text{position}} + \underbrace{\mathbf{s}_{A \text{ ou } B}}_{\text{segment}}
+$$
+:::
+
+::: {.fragment}
+**Seconde tâche de pré-entraînement** (*Next Sentence Prediction*) : B est-elle la vraie suite de A (50 %) ou une phrase tirée au hasard (50 %) ?
+$$
+p_\theta(\text{suite} \mid A, B) = \sigma\left(\mathbf{w}^\top \mathbf{h}_{[CLS]}\right)
+$$
+(Abandonnée par la suite, par exemple dans RoBERTa, car peu utile.)
+:::
+
+| Modèle | Paramètres | Blocs $L$ | $d_{model}$ | Têtes $h$ |
+|--------|-----------|-------|-------------|-------|
+| BERT-base (2018) | 110 M | 12 | 768 | 12 |
+| BERT-large (2018) | 340 M | 24 | 1 024 | 16 |
+
+---
+
+### Utiliser BERT : pré-entraînement puis *fine-tuning*
+
+::: {.callout-note title="Deux étapes"}
+1. **Pré-entraînement** (très coûteux, fait une fois) : MLM sur des milliards de mots → paramètres $\theta_0$
+2. **Fine-tuning** (peu coûteux) : on ajoute une petite couche de sortie et on ré-entraîne **tout** le modèle, en partant de $\theta_0$, sur une tâche précise avec peu de données annotées
+:::
+
+::: {.fragment}
+**Classification de texte** ($C$ classes, par exemple l'analyse de sentiment) :
+$$
+p(y \mid \mathbf{x}) = \text{softmax}\left(\mathbf{h}_{[CLS]} \mathbf{W}_c + \mathbf{b}_c\right), \qquad \mathbf{W}_c \in \mathbb{R}^{d_{model} \times C}
+$$
+:::
+
+::: {.fragment}
+**Reconnaissance d'entités nommées** : une prédiction **par token**,
+$$
+p(y_t \mid \mathbf{x}) = \text{softmax}\left(\mathbf{h}_t \mathbf{W}_c + \mathbf{b}_c\right), \qquad t = 1, \dots, T
+$$
+:::
+
+::: {.fragment}
+Dans les deux cas, on minimise l'entropie croisée $-\sum \log p(y \mid \mathbf{x})$ par rapport à $(\theta, \mathbf{W}_c, \mathbf{b}_c)$.
+
+On retrouve les problèmes de NLP du début de la présentation, résolus par **un seul modèle pré-entraîné** !
+:::
+
+:::{.notes}
+- Seuls $\mathbf{W}_c, \mathbf{b}_c$ sont nouveaux : $d_{model} \times C$ paramètres, contre 110 M pour BERT-base.
+- Le pré-entraînement a déjà appris la syntaxe et une partie de la sémantique : le fine-tuning n'a qu'à les « orienter ».
+:::
+
+---
+
+### GPT vs BERT
+
+| | **GPT** | **BERT** |
+|---|---|---|
+| **Partie du Transformer** | Décodeur | Encodeur |
+| **Masque d'attention** | Causal : $\alpha_{ij} = 0$ si $j > i$ | Aucun |
+| **Objectif** | $-\sum_t \log p_\theta(x_t \mid x_{<t})$ | $-\sum_{t \in \mathcal{M}} \log p_\theta(x_t \mid \tilde{\mathbf{x}})$ |
+| **Loi jointe $p(x_1, \dots, x_T)$** | Oui | Non |
+| **Point fort** | **Générer** du texte | **Comprendre / représenter** un texte |
+| **Usages** | Chatbots, code, résumé, traduction | Classification, NER, recherche sémantique |
+| **Descendants** | GPT-4, Claude, Llama, Mistral... | RoBERTa, CamemBERT, DeBERTa... |
+
+::: {.fragment}
+::: {.callout-tip}
+Aujourd'hui, les grands modèles génératifs (type GPT) dominent : avec assez de paramètres et de données, **bien prédire** le texte suppose de le **comprendre**. Les modèles type BERT restent très utilisés quand il faut être rapide et peu coûteux (classification, embeddings).
+:::
+:::
 
 
-### Prompting
-
-### Software : Claude (code), 
-### Agent
-
-- communication entre agent
-
-
-### 
