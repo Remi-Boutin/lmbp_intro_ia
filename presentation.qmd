@@ -1,7 +1,7 @@
 ---
 title: "Introduction aux modèles de langage profonds et leurs extensions."
 author: "Rémi Boutin"
-format: 
+format:
     revealjs:
         embed-resources: true
         code-fold: true
@@ -12,15 +12,52 @@ format:
         history: true
         center: true
         theme: simple
+        include-in-header:
+          text: |
+            <style>
+            .collapse-button {
+              background-color: #f0f0f0;
+              border: 1px solid #ccc;
+              padding: 8px 12px;
+              cursor: pointer;
+              border-radius: 4px;
+              font-weight: bold;
+              display: inline-block;
+            }
+            .collapse-button:hover {
+              background-color: #e0e0e0;
+            }
+            .collapse-content {
+              display: none;
+              margin-top: 10px;
+              padding: 10px;
+              border-left: 3px solid #4CAF50;
+              background-color: #f9f9f9;
+            }
+            .collapse-content.show {
+              display: block;
+            }
+            </style>
+            <script>
+            document.addEventListener('DOMContentLoaded', function() {
+              document.querySelectorAll('.collapse-button').forEach(button => {
+                button.addEventListener('click', function() {
+                  const content = this.nextElementSibling;
+                  content.classList.toggle('show');
+                  this.textContent = content.classList.contains('show') ? '▼ Masquer' : '▶ Afficher';
+                });
+              });
+            });
+            </script>
 ---
 
 ---
 
 Plan : 
 
-- Language models
-- Tokenization
-- Embeddings
+- Historique
+- Pré-traitement
+- Apprentissage de représentations : embeddings
 - Multi-layer perceptron (MLP)
 - Mécanisme d'(auto-)attention
 - (Decoder) Transformer
@@ -67,9 +104,11 @@ Plan :
 
 ### Pré-traitement du texte
 
-![Preprocesing, crédits hugging face](images/LMBP_pre_processing.png)
+![Preprocesing, crédits hugging face](images/LMBP_pre_processing.png){width=80%}
 
-
+:::{.notes}
+construction des briques élémentaires du modèle
+:::
 --- 
 
 ### Tokenization
@@ -246,11 +285,10 @@ Un RNN traite les données **séquentiellement**, token par token, en maintenant
 
 **Fonctionnement :**
 
+![RNN, issu de *Feng, Weijiang & Guan, Naiyang & Li, Yuan & Zhang, Xiang & Luo, Zhigang. (2017)*](images/The-standard-RNN-and-unfolded-RNN.png){width=80%}
 
-![RNN, issu de *Feng, Weijiang & Guan, Naiyang & Li, Yuan & Zhang, Xiang & Luo, Zhigang. (2017)*](/images/The-standard-RNN-and-unfolded-RNN.png)
-
-
-::: {.callout-note collapse="true"}
+<button class="collapse-button">▶ Afficher les équations</button>
+<div class="collapse-content">
 À chaque étape $t$, le RNN met à jour son état caché :
 
 $$
@@ -261,7 +299,7 @@ $$
 - $\mathbf{h}_t$ : état caché (contexte accumulé jusqu'à la position $t$)
 - $\mathbf{W}_{hh}, \mathbf{W}_{xh}$ : poids du réseau
 - $\sigma$ : fonction d'activation (tanh, ReLU)
-:::
+</div>
 
 
 **Le problème central : le gradient qui s'évanouït**
@@ -273,7 +311,9 @@ $$
 
 La chaîne de produits $\frac{\partial \mathbf{h}_t}{\partial \mathbf{h}_{t-1}}$ contient des valeurs $< 1$ qui se multiplient, causant une **vanishing gradient** pour les dépendances lointaines.
 
-
+:::{.notes}
+- formule de dérivation de fonctions composées, dérivation en chaîne
+:::
 
 ---
 
@@ -289,6 +329,10 @@ Un LSTM maintient deux états :
 - $\mathbf{c}_t$ : **cell state** (mémoire long terme)
 - $\mathbf{h}_t$ : **hidden state** (mémoire court terme)
 
+Les mêmes limitations que pour le RNN apparaissent. 
+
+<button class="collapse-button">▶ Afficher les équations</button>
+<div class="collapse-content">
 Trois portes contrôlent les flux :
 
 $$
@@ -310,6 +354,7 @@ $$
 \mathbf{h}_t = \mathbf{o}_t \odot \tanh(\mathbf{c}_t) \quad \text{où } \mathbf{o}_t = \sigma(\mathbf{W}_o \cdot [\mathbf{h}_{t-1}, \mathbf{x}_t] + \mathbf{b}_o)
 $$
 
+<div>
 ---
 
 ### Limitations des RNN/LSTM
@@ -362,27 +407,65 @@ Ils éliminent la nature séquentielle en utilisant le **mécanisme d'attention*
 
 ### Mécanisme d'attention
 
+**D'un point de vu haut niveau :** 
+
+- **Input :** une suite d'embeddings $(\mathbf{x}_1, \dots, \mathbf{x}_d)$, un pour chaque tokens 
+
+- **Output :** une nouvelle matrice où chaque embeddings a été mis à jour grâce à l'information contenue dans les autres embeddings de tokens. 
+
+
+---
+
+### Exemple intuitif : Requête, Clé, Valeur
+
+**Phrase :** "Le chat noir dort tranquillement" (n = 5 tokens)
+
+**Question :** Pour mettre à jour le mot "chat", quels autres mots sont pertinents ?
+
+On va calculer une requête, une clé et une valeur pour chacun des 5 tokens.
+
+::: {.fragment}
+**Pour le mot "chat" :**
+
+- **Requête (Q)** : "Je cherche des adjectifs et des verbes"
+- **Clés (K)** :
+  - "noir" → "Je suis un adjectif" ✓ Match !
+  - "dort" → "Je suis un verbe" ✓ Match !
+  - "Le" → "Je suis un article" ✗ Pas pertinent
+- **Valeurs (V)** :
+  - "noir" → "Je suis une couleur"
+  - "dort" → "Je suis une action"
+  - "Le" → "Je suis un article"
+:::
+
+::: {.fragment}
+**Résultat final :**
+
+Le mot "chat" combine les informations des autres mots selon leur pertinence :
+
+$$\text{chat}_{new} \approx 0.6 \times V(\text{noir}) + 0.3 \times V(\text{dort}) + 0.1 \times V(\text{Le})$$
+
+Plus la clé (K) correspond à la requête (Q), plus on prend sa valeur (V) ! 🎯
+:::
+
+
+---
+
+### Mécanisme d'attention
+
 ::: {.callout-note title=Définition}
 **Mécanisme d'attention :** Un mécanisme d'attention est une fonction différentiable $\mathcal{A}: \mathbb{R}^d_q \times \mathbb{R}^{n \times d_k } \times \mathbb{R}^{n \times d_v} \rightarrow \mathbb{R}^{d_v}$ qui prend en entrée une requête, une clé et une valeur, et retourne une combinaison pondérée des valeurs basée sur la *compatibilité* entre les requêtes et les clées.
 :::
 
 **Notations :**
 
-- $\mathbf{Q} = (\mathbf{q}_1, \dots, \mathbf{q}_m)$ : matrice des requêtes, m=nombre de requêtes
-- $\mathbf{K} =(\mathbf{k}_1, \dots, \mathbf{k}_n) \in \mathbb{R}^{n \times d_k}$ : matrice des clés, n=nombre de clés
-- $\mathbf{V}  = (\mathbf{v}_1, \dots, \mathbf{v}_n) \in \mathbb{R}^{n \times d_v}$ : matrice des valeurs, n=nombre de clés/valeurs
+- $n$ = nombre de tokens (la longueur de la séquence)
+- $\mathbf{Q} = (\mathbf{q}_1, \dots, \mathbf{q}_n) \in \mathbb{R}^{n \times d_k}$ : matrice des requêtes (chaque token pose une question)
+- $\mathbf{K} =(\mathbf{k}_1, \dots, \mathbf{k}_n) \in \mathbb{R}^{n \times d_k}$ : matrice des clés (chaque token montre sa signature)
+- $\mathbf{V}  = (\mathbf{v}_1, \dots, \mathbf{v}_n) \in \mathbb{R}^{n \times d_v}$ : matrice des valeurs (chaque token apporte son contenu)
 - $d_k$ : dimension des clés
 - $d_v$ : dimension des valeurs
 
----
-
-### Mécanisme d'attention
-
-**D'un point de vu haut niveau :** 
-
-- **Input :** une suite d'embeddings $(\mathbf{x}_1, \dots, \mathbf{x}_d)$, un pour chaque tokens 
-
-- **Output :** une nouvelle matrice où chaque embeddings a été mis à jour grâce à l'information contenue dans les autres embeddings de tokens. 
 
 --- 
 
@@ -398,7 +481,6 @@ Pour une requête $\mathbf{q}$, le mécanisme d'attention calcule alors :
 
 Il existe plusieurs variantes du mécanisme d'attention, notamment :
 
-//- Attention additive (Bahdanau) : $\text{score}(\mathbf{q}, \mathbf{k}_i) = \mathbf{v}^\top \tanh(\mathbf{W}_q \mathbf{q} + \mathbf{W}_k \mathbf{k}_i)$
 - Attention *dot-product* : $\text{score}(\mathbf{q}, \mathbf{k}_i) = \mathbf{q}^\top \mathbf{k}_i$
 - Attention *scaled dot-product* : $\text{score}(\mathbf{q}, \mathbf{k}_i) = \frac{\mathbf{q}^\top \mathbf{k}_i}{\sqrt{d_k}}$
 - Attention multi-têtes (multi-head attention) que l'on verra plus tard.
@@ -464,7 +546,7 @@ avec $\theta = \{\mathbf{W}_Q, \mathbf{W}_K, \mathbf{W}_V\}$.
 
 ---
 
-![Petit historique des modèles basés sur des transformers, crédits à Hugging Face](/images/transformer_historic.png)
+![Petit historique des modèles basés sur des transformers, crédits à Hugging Face](images/transformer_historic.png){width=80%}
 
 L'évolution des modèles de langage reposant sur les transformers s'accompagne de différence entre les modèles : 
 

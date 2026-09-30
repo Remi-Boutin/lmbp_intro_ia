@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//home/reboutin/.cache/huggingface/hub/**)",
+      "Bash(/home/reboutin/miniconda3/envs/huggingface/bin/python -c \"import transformers, torch; print\\(transformers.__version__, torch.__version__\\)\")"
+    ]
+  }
+}
