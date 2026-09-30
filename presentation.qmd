@@ -1,0 +1,500 @@
+---
+title: "Introduction aux modèles de langage profonds et leurs extensions."
+author: "Rémi Boutin"
+format: 
+    revealjs:
+        embed-resources: true
+        code-fold: true
+        smaller: true
+        css: styles.css
+        slide-number: true
+        progress: true
+        history: true
+        center: true
+        theme: simple
+---
+
+---
+
+Plan : 
+
+- Language models
+- Tokenization
+- Embeddings
+- Multi-layer perceptron (MLP)
+- Mécanisme d'(auto-)attention
+- (Decoder) Transformer
+- Autoregressive generation
+
+
+---
+
+
+### Petit historique des avancées en traitement automatique du langage
+
+
+- 1950 - 2000 : Approches symboliques (ensemble de règles édictées à l'avance)
+- 2000 - 2012 : Déput du Deep Learning 
+    - Yann Le Cun propose la reconnaissance de chiffres écrits à la main
+    - RNN puis LSTM pour obtenir des réseaux prenant en compte les dépendances entre éléments éloignés d'un texte
+- 2017 : Les Transformers (!)
+- 2018-2024 : L'ère des LLM pré-entraînés
+- 2024 - aujourd'hui : IA agentique 
+
+---
+
+### Traitement automatique du langage 
+(ou Natural Language Processing, NLP)
+
+**Les types de problèmes que l'on souhaite résoudre :**
+
+- **analyse de sentiment** : 
+    - "J'adore ce nouveau vélo" -> sentiment positif
+    -  dans des formulaires de retour d'expérience "Il y avait trop de blabla dans la présentation" -> sentiment négatif
+- **classification de texte** : On donne un texte en entrée, sortie : 1 si créé par l'IA, 0 sinon (ou une probabilité) 
+- **traduction automatique** 
+- **reconnaissance d'entités nommées** : par exemple en droit, automatisation de la numérisation de documents codifiés mais pas homogènes
+- **génération de texte** 
+
+
+---
+
+##  Tokenization 
+(Ou l'art du pré-traitement)
+
+
+---
+
+### Pré-traitement du texte
+
+![Preprocesing, crédits hugging face](images/LMBP_pre_processing.png)
+
+
+--- 
+
+### Tokenization
+
+La **tokenization** est le processus de découpage d'un texte en unités plus petites appelées **tokens**. Ces tokens peuvent être des mots, des sous-mots ou même des caractères, selon la granularité choisie : 
+
+::: {.fragment}
+- **charactères** : dur de capturer une semantique mais petit en taille 
+"Le chat dort." -> "L", "e", " ", "c", "h", "a", "t", " ", "d", "o", "r", "t", "."
+:::
+
+::: {.fragment}
+- **mots** : très grand en taille, certaines informations sont redondantes "long", "longeur"
+"Le chat dort." -> "Le", "chat", "dort."
+:::
+
+
+:::{.fragment}
+- **tokens** : entre les deux, on cherche à décomposer les mots en briques élémentaires
+:::
+
+
+ 
+
+
+
+
+
+:::{.notes}
+- mots inconnus (out-of-vocabulary words)
+- il y en a beaucoup
+- ne capture pas la similarité
+- faute d'orthographe
+:::
+
+
+--- 
+
+**Exemple de tokens :**
+
+Texte : "Le chat dort."
+
+
+Tokens : ["Le", "ch", "at", "do", "rt", "."]
+
+Indices : [100, 21, 255, 183, 87, 47]
+
+embeddings : (juste après)
+
+Le texte a été converti en entiers représentant les indices de chaque token.
+
+L'unité élémentaire est le **token** !
+
+
+:::{.notes}
+On a résolu les limitations des approches précédentes: 
+
+- mots inconnus (out-of-vocabulary words)
+- il y en a beaucoup
+- ne capture pas la similarité
+- faute d'orthographe
+:::
+---
+
+```{python .code-overflow-wrap}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+from transformers import AutoTokenizer
+
+tokenizer = AutoTokenizer.from_pretrained("bert-base-cased")
+phrase = "Orélien a eu recours à l'IA ?"
+print(phrase)
+print(f"Tokens associés -> {tokenizer.tokenize(phrase)}")
+print(f"input ids -> {tokenizer(phrase)["input_ids"]}")
+```
+
+
+
+---
+
+### Embeddings et le perceptron multicouche
+
+- Un embedding est une **représentation vectoriel**, d'un token ou tout autre objet (image, graphe, etc...) dans un espace vectoriel (appelé **espace latent**), souvent $\mathbb{R}^d$.
+
+- On différencie les embeddings (représentations continues, aussi appelées denses) des représentations discrètes (sparse / creuses).
+
+- **But :** représenter chaque tokens dans un **espace latent** en encodant **les concepts** et **les sens sémantiques** comme directions dans cet espace.
+
+
+
+```{python}
+#| echo: false
+import plotly.graph_objects as go
+import numpy as np
+from sklearn.decomposition import PCA
+
+import torch
+from transformers import GPT2Model
+import tiktoken
+
+enc = tiktoken.get_encoding("gpt2")
+model = GPT2Model.from_pretrained("gpt2")
+model.eval()
+E = model.wte.weight.detach().numpy()
+
+words = [
+    "king", "man", "woman",
+    "dog", "wolf", "fox",
+    "milk", "butter", "cheese",
+    "car", "train", "city",
+]
+
+# On prend la moyenne des embeddings de chaque mot
+X = np.array([E[enc.encode(w)].mean(axis=0) for w in words])  # shape : (len(words), 768)
+pca = PCA(n_components=3, random_state=42)
+X3 = pca.fit_transform(X)
+
+categories = {
+    "kingdom" : ["king", "man", "woman"],
+    "animal" : ["dog", "wolf", "fox"],
+    "food": ["milk", "butter", "cheese"],
+    "location"    : ["car", "train", "city"],
+}
+
+colors = {
+    "kingdom" : "#7F77DD",
+    "animal" : "#1D9E75",
+    "food": "#EF9F27",
+    "location"    : "#888780",
+}
+
+word_to_cat = {w: cat for cat, ws in categories.items() for w in ws}
+
+fig = go.Figure()
+
+for cat, ws in categories.items():
+    idx = [words.index(w) for w in ws]
+    fig.add_trace(go.Scatter3d(
+        x=X3[idx, 0], y=X3[idx, 1], z=X3[idx, 2],
+        mode="markers+text",
+        name=cat,
+        text=ws,
+        textposition="top center",
+        textfont=dict(size=12),
+        marker=dict(size=7, color=colors[cat], opacity=0.9),
+    ))
+
+fig.update_layout(
+    scene=dict(
+        xaxis_title=f"PC1",
+        yaxis_title=f"PC2",
+        zaxis_title=f"PC3",
+    ),
+    legend=dict(itemsizing="constant"),
+    margin=dict(l=0, r=0, t=30, b=0)
+)
+
+fig.show()
+```
+
+
+
+# Une révolution : le mécanisme d'attention
+
+
+---
+
+### RNN (Recurrent Neural Networks)
+
+::: {.callout-note title="Idée principale"}
+Un RNN traite les données **séquentiellement**, token par token, en maintenant un **état caché** qui encode l'information des tokens précédents.
+:::
+
+**Fonctionnement :**
+
+
+![RNN, issu de *Feng, Weijiang & Guan, Naiyang & Li, Yuan & Zhang, Xiang & Luo, Zhigang. (2017)*](/images/The-standard-RNN-and-unfolded-RNN.png)
+
+
+::: {.callout-note collapse="true"}
+À chaque étape $t$, le RNN met à jour son état caché :
+
+$$
+\mathbf{h}_t = \sigma(\mathbf{W}_{hh} \mathbf{h}_{t-1} + \mathbf{W}_{xh} \mathbf{x}_t + \mathbf{b}_h)
+$$
+
+- $\mathbf{x}_t$ : embedding du token à la position $t$
+- $\mathbf{h}_t$ : état caché (contexte accumulé jusqu'à la position $t$)
+- $\mathbf{W}_{hh}, \mathbf{W}_{xh}$ : poids du réseau
+- $\sigma$ : fonction d'activation (tanh, ReLU)
+:::
+
+
+**Le problème central : le gradient qui s'évanouït**
+
+Lors du rétropropagation sur $T$ étapes :
+$$
+\frac{\partial L}{\partial \mathbf{W}_{hh}} = \sum_{t=1}^{T} \frac{\partial L_t}{\partial \mathbf{h}_T} \cdot \frac{\partial \mathbf{h}_T}{\partial \mathbf{h}_t} \cdots \frac{\partial \mathbf{h}_{t+1}}{\partial \mathbf{h}_t} \cdot \frac{\partial \mathbf{h}_t}{\partial \mathbf{W}_{hh}}
+$$
+
+La chaîne de produits $\frac{\partial \mathbf{h}_t}{\partial \mathbf{h}_{t-1}}$ contient des valeurs $< 1$ qui se multiplient, causant une **vanishing gradient** pour les dépendances lointaines.
+
+
+
+---
+
+### LSTM (Long Short-Term Memory)
+
+::: {.callout-note title="Innovation"}
+Les LSTM introduisent des **portes** (gates) qui contrôlent le flux d'information, permettant aux gradients de "voyager" plus loin dans le temps.
+:::
+
+**Architecture :**
+
+Un LSTM maintient deux états :
+- $\mathbf{c}_t$ : **cell state** (mémoire long terme)
+- $\mathbf{h}_t$ : **hidden state** (mémoire court terme)
+
+Trois portes contrôlent les flux :
+
+$$
+\mathbf{f}_t = \sigma(\mathbf{W}_f \cdot [\mathbf{h}_{t-1}, \mathbf{x}_t] + \mathbf{b}_f) \quad \text{(forget gate)}
+$$
+$$
+\mathbf{i}_t = \sigma(\mathbf{W}_i \cdot [\mathbf{h}_{t-1}, \mathbf{x}_t] + \mathbf{b}_i) \quad \text{(input gate)}
+$$
+$$
+\mathbf{C}_t = \tanh(\mathbf{W}_c \cdot [\mathbf{h}_{t-1}, \mathbf{x}_t] + \mathbf{b}_c) \quad \text{(candidate state)}
+$$
+
+Mise à jour de la mémoire :
+$$
+\mathbf{c}_t = \mathbf{f}_t \odot \mathbf{c}_{t-1} + \mathbf{i}_t \odot \mathbf{C}_t
+$$
+
+$$
+\mathbf{h}_t = \mathbf{o}_t \odot \tanh(\mathbf{c}_t) \quad \text{où } \mathbf{o}_t = \sigma(\mathbf{W}_o \cdot [\mathbf{h}_{t-1}, \mathbf{x}_t] + \mathbf{b}_o)
+$$
+
+---
+
+### Limitations des RNN/LSTM
+
+::: {.callout-important}
+1. **Dépendances limitées même avec LSTM** : L'ordre séquentiel limite la capacité à modéliser des dépendances sur très long terme (>100-200 tokens)
+:::
+
+::: {.callout-important}
+2. **Pas de parallélisation** : Traiter les tokens un à un rend l'entraînement très lent sur GPU/TPU (impossible de traiter les positions en parallèle)
+:::
+
+::: {.callout-important}
+3. **Goulot d'étranglement informationnel** : L'état caché $\mathbf{h}_t$ doit encoder **toute** l'information pertinente des $t-1$ tokens précédents dans un vecteur de dimension fixe
+:::
+
+::: {.callout-important}
+4. **Inégalité positionnelle** : Les tokens au début d'une longue séquence ont moins d'influence sur les tokens à la fin (problème du **dilution de l'information**)
+:::
+
+**Exemple concret :**
+
+"Alice a parlé avec Bob. Ils ont discuté de nombreux sujets intéressants pendant trois heures. ... Finalement, **elle** a décidé de partir."
+
+Le pronom "elle" dépend d'Alice à 40+ tokens plus tôt, mais les LSTM peinent à maintenir cette relation.
+
+---
+
+### Limitation des méthodes précédentes
+
+**Résumé :**
+
+| Aspect | RNN/LSTM | Problème |
+|--------|----------|---------|
+| **Dépendances long terme** | ❌ Limitées | Gradients qui s'évanouissent |
+| **Parallélisation** | ❌ Séquentiel | Pas d'accélération GPU efficace |
+| **Mémoire** | ❌ Goulot | État caché de taille fixe |
+| **Scalabilité** | ❌ Lente | Entraînement très long |
+
+**C'est ici qu'interviennent les Transformers ! 🚀**
+
+Ils éliminent la nature séquentielle en utilisant le **mécanisme d'attention**, qui permet :
+- ✅ Accès **direct** à tous les tokens (pas de goulot d'étranglement)
+- ✅ **Parallélisation complète** de toutes les positions
+- ✅ Dépendances **sans limite de distance** (théoriquement)
+- ✅ Entraînement **jusqu'à 100x plus rapide**
+
+
+---
+
+### Mécanisme d'attention
+
+::: {.callout-note title=Définition}
+**Mécanisme d'attention :** Un mécanisme d'attention est une fonction différentiable $\mathcal{A}: \mathbb{R}^d_q \times \mathbb{R}^{n \times d_k } \times \mathbb{R}^{n \times d_v} \rightarrow \mathbb{R}^{d_v}$ qui prend en entrée une requête, une clé et une valeur, et retourne une combinaison pondérée des valeurs basée sur la *compatibilité* entre les requêtes et les clées.
+:::
+
+**Notations :**
+
+- $\mathbf{Q} = (\mathbf{q}_1, \dots, \mathbf{q}_m)$ : matrice des requêtes, m=nombre de requêtes
+- $\mathbf{K} =(\mathbf{k}_1, \dots, \mathbf{k}_n) \in \mathbb{R}^{n \times d_k}$ : matrice des clés, n=nombre de clés
+- $\mathbf{V}  = (\mathbf{v}_1, \dots, \mathbf{v}_n) \in \mathbb{R}^{n \times d_v}$ : matrice des valeurs, n=nombre de clés/valeurs
+- $d_k$ : dimension des clés
+- $d_v$ : dimension des valeurs
+
+---
+
+### Mécanisme d'attention
+
+**D'un point de vu haut niveau :** 
+
+- **Input :** une suite d'embeddings $(\mathbf{x}_1, \dots, \mathbf{x}_d)$, un pour chaque tokens 
+
+- **Output :** une nouvelle matrice où chaque embeddings a été mis à jour grâce à l'information contenue dans les autres embeddings de tokens. 
+
+--- 
+
+### Mécanisme d'attention
+
+Pour une requête $\mathbf{q}$, le mécanisme d'attention calcule alors :
+
+- $e_i = \text{score}(\mathbf{q}, \mathbf{k}_i)$ : score de compatibilité entre la requête $\mathbf{q}$ et la clé $\mathbf{k}_i$
+
+- $\alpha_i = \text{softmax}(e_i)$ : poids d'attention associé à la valeur $\mathbf{v}_i$
+- $\mathcal{A}(\mathbf{q}, \mathbf{K}, \mathbf{V}) = \sum_i \alpha_i \mathbf{v}_i$ : représentation de la requête $\mathbf{q}$ étant données les clés $\mathbf{K}$ et les valeurs $\mathbf{V}$.
+
+
+Il existe plusieurs variantes du mécanisme d'attention, notamment :
+
+//- Attention additive (Bahdanau) : $\text{score}(\mathbf{q}, \mathbf{k}_i) = \mathbf{v}^\top \tanh(\mathbf{W}_q \mathbf{q} + \mathbf{W}_k \mathbf{k}_i)$
+- Attention *dot-product* : $\text{score}(\mathbf{q}, \mathbf{k}_i) = \mathbf{q}^\top \mathbf{k}_i$
+- Attention *scaled dot-product* : $\text{score}(\mathbf{q}, \mathbf{k}_i) = \frac{\mathbf{q}^\top \mathbf{k}_i}{\sqrt{d_k}}$
+- Attention multi-têtes (multi-head attention) que l'on verra plus tard.
+
+
+:::{.notes}
+Etapé 1 - Calcul du score : pr chaque position $i$, la scalaire $e_i$ indique la compatibilité, ou pertinence, ou similarité, de la requête $\mathbf{q}$ avec la clé $\mathbf{k}_i$.
+
+Etapé 2 - Application de la softmax : les scores sont normalisés pour obtenir des poids / une distribution de probabilité sur les valeurs.
+
+Etapé 3 - Combinaison des valeurs : les valeurs $\mathbf{v}_i$ sont pondérées par les poids d'attention $\alpha_i$ pour obtenir la représentation finale de la requête.
+
+:::
+
+---
+
+### Mécanisme d'attention 
+
+Version matricielle pour plusieurs requêtes : 
+
+$$
+Attention(\mathbf{Q}, \mathbf{K}, \mathbf{V}) = \text{softmax}\left(\frac{\mathbf{Q}\mathbf{K}^\top}{\sqrt{d_k}}\right)\mathbf{V} \in \mathbb{R^{m \times d_v}}
+$$
+- 
+
+avec 
+
+- $\mathbf{Q} \in \mathbb{R}^{m \times d_k}$ : matrice des requêtes, m=nombre de requêtes
+- $\mathbf{K} \in \mathbb{R}^{n \times d_k}$ : matrice des clés, n=nombre de clés
+- $\mathbf{V} \in \mathbb{R}^{n \times d_v}$ : matrice des valeurs, n=nombre de clés/valeurs
+- $d_k$ : dimension des clés
+
+
+
+---
+
+
+
+### Mécanisme d'auto-attention 
+
+::: {.callout-note title=Définition}
+Etant donné une matrice d'entrées $\mathbf{X} \in \mathbb{R}^{n \times d_{model}}$ où $n$ est la taille de l'entrée, et $d_{model}$ est la dimension du modèle, le mécanisme d'auto-attention calcule les requêtes, clés et valeurs à partir de $\mathbf{X}$ :
+
+$$
+\mathbf{Q} = \mathbf{X}\color{darkred}{\mathbf{W}_Q}, \quad \mathbf{K} = \mathbf{X} \color{darkred}{\mathbf{W}_K}, \quad \mathbf{V} = \mathbf{X}\color{darkred}{\mathbf{W}_V}
+$$
+
+où $\color{darkred}{\mathbf{W}_Q} \in \mathbb{R}^{d_{model} \times d_k}, \quad \color{darkred}{\mathbf{W}_K} \in \mathbb{R}^{d_{model} \times d_k}, \quad \color{darkred}{\mathbf{W}_V} \in \mathbb{R}^{d_{model} \times d_v}$ sont des matrices de paramètres à estimer. 
+
+Le mécanisme d'auto-attention (pour le *scaled dot-product*) est donnée par
+$$
+\text{Attention}_{\theta}(\mathbf{Q}, \mathbf{K}, \mathbf{V}) = \text{softmax}\left(\frac{\mathbf{Q}\mathbf{K}^\top}{\sqrt{d_k}}\right)\mathbf{V}
+$$
+avec $\theta = \{\mathbf{W}_Q, \mathbf{W}_K, \mathbf{W}_V\}$.
+:::
+
+**Interprétation :**
+
+- $\mathbf{q}_i = \mathbf{x_i} \mathbf{W}_Q$ représente l'information recherchée
+- $\mathbf{k}_i = \mathbf{x_i} \mathbf{W}_K$ représente l'information disponible pour la comparaison
+- $\mathbf{v}_i = \mathbf{x_i} \mathbf{W}_V$ représente le contenu de l'information de la position $i$.
+
+
+---
+
+![Petit historique des modèles basés sur des transformers, crédits à Hugging Face](/images/transformer_historic.png)
+
+L'évolution des modèles de langage reposant sur les transformers s'accompagne de différence entre les modèles : 
+
+- ceux de type GPT (aussi appelés transformers autorégressifs)
+- ceux de type BERT (aussi appelés transformers auto-encodeurs)
+- ceux de type BART/T5 (aussi appelés transformers séquence-à-séquence)
+
+
+
+---
+
+### Transformer
+
+
+
+
+
+
+### GPT
+
+
+### BERT
+
+
+### Prompting
+
+### Software : Claude (code), 
+### Agent
+
+- communication entre agent
+
+
+### 

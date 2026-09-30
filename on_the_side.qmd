@@ -1,0 +1,76 @@
+## Apprentissage paramétrique
+
+**But :** trouver une fonction paramétrique qui approxime la relation entre les variables d'entrée et de sortie. 
+$$
+ y = f(\mathbf{x}; \theta)
+$$
+
+avec $\mathbf{x} \in \mathbb{R}^d$ une observation et $y \in \mathbb{R}$ la variable cible.
+
+**Exemple :** 
+
+- $\mathbf{x} \in \mathbb{R^{d\times d}}$ est une radiographie 
+- $y$ est une variable binaire avec 0 si le patient est *sain*, 0 s'il est *malade*. 
+
+
+**Procédure :**
+
+- Restriction à **une famille de fonctions paramétriques** 
+- on **ajuste** les paramètres $\theta \in \mathbb{R}^p$ pour minimiser une **fonction de perte** mesurant l'erreur entre les prédictions $\hat{y_i} = f(\mathbf{x}_i; \theta)$ et les observations $y_i$.
+
+**Exemples :**
+
+- fonctions linéaires (en ses paramètres), fonctions logistiques, perceptrons Multi-Couche
+
+**Comment fitter les paramètres ?** (aussi appelé **apprentissage**)
+
+
+--- 
+
+### A chaque problème ses fonctions de perte
+
+- **Régression** : A partir de $\mathbf{x}_i \in \mathbb{R}^d$, estimer une valeur **continue** $y_i \in \mathbb{R}$ (possiblement multi-dimensionnelle mais c'est la même idée). Fonction de perte classique associée : **les moindres carrés** : 
+$$
+L(\theta) = \sum_{i=1}^n (y_i - \hat{y}_i)^2 = \sum_{i=1}^n (y_i - f(\mathbf{x}_i; \theta))^2
+$$
+
+- **Classification** : A partir de $\mathbf{x}_i \in \mathbb{R}^d$, estimer le groupe auquel appartient $i$. Fonction de perte classique associée : **la cross-entropy**. Soit $y_i = (0, ..., 0 , 1, 0,...,0)$ avec un $1$ en k-ième position si $i$ appartient à la classe $k$, alors la cross-entropy s'écrit :
+
+$$
+L(\theta) = - \sum_{i=1}^n \sum_{k=1}^K y_{i,k} \log \hat{y}_{i,k}
+$$
+
+où $\hat{y}_{i,k}$ est la **probabilité prédite** que l'individu $i$ appartienne à la classe $k$.
+
+
+---
+
+- Mettre un exemple de perceptron multi-couche
+- de réseau de convolution
+- de graphe neural network
+
+---
+
+
+### Descente de gradient
+
+En supposant la fonction $f(\cdot, \theta)$ différentiable, la m.à.j des paramètres par **descente de gradient** s'écrit :
+
+$$
+\theta_{t+1} \leftarrow \theta_t - \eta_t \nabla_\theta L(\theta_t)
+$$
+
+En pratique, trop lent à calculer ! On utilise une version **stochastique** où le gradient est estimé à partir d’un **sous-ensemble aléatoire des données**. 
+
+Soit $(\mathcal{B})_{m=1}^M$, $M$ mini-lot de données aléatoire. La mise à jour des paramètres par descente de gradient stochastique s'écrit alors :
+
+$$
+\theta_{t+1} \leftarrow \theta_t - \eta_t \nabla_\theta L_{\mathcal{B}_t}(\theta_t)
+$$
+
+avec 
+
+$$
+L_{\mathcal{B}_t}(\theta_t) = \frac{1}{|\mathcal{B}_t|} \sum_{i \in \mathcal{B}_t} L_i(\theta_t)
+$$
+

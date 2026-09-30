@@ -1,0 +1,19 @@
+.reveal .slides section {
+    top: 0 !important;
+}
+
+.reveal h1,
+.reveal h2,
+.reveal h3 {
+    margin-top: 0;
+}
+
+.definition {
+  border-left: 8px solid #0d6efd;
+  background-color: #eef6ff;
+  border-radius: 12px;
+}
+
+.callout-note .callout-icon {
+display: none;
+}
