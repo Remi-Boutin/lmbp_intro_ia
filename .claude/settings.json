@@ -14,7 +14,12 @@
       "Read(//tmp/**)",
       "Bash(/home/reboutin/miniconda3/envs/huggingface/bin/python -c ' *)",
       "Bash(grep -n -E \"^# |^### |^\\\\`\\\\`\\\\`\" presentation.qmd)",
-      "Bash(cp /home/reboutin/Notes/LMBP_intro_IA/presentation.qmd /tmp/claude-1000/-home-reboutin-Notes-LMBP-intro-IA/32647791-f87b-43c7-ae6c-8097a49236b7/scratchpad/render/)"
+      "Bash(cp /home/reboutin/Notes/LMBP_intro_IA/presentation.qmd /tmp/claude-1000/-home-reboutin-Notes-LMBP-intro-IA/32647791-f87b-43c7-ae6c-8097a49236b7/scratchpad/render/)",
+      "Bash(grep -n -B2 -A14 '```{mermaid}' presentation.qmd)",
+      "Read(//home/reboutin/.cache/**)",
+      "Bash(/home/reboutin/miniconda3/envs/huggingface/bin/python -c \"import playwright\")",
+      "Bash(quarto tools *)",
+      "Bash(/home/reboutin/miniconda3/envs/huggingface/bin/python -c \"import cairosvg\")"
     ]
   }
 }

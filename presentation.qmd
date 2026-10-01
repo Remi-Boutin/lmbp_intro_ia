@@ -695,17 +695,32 @@ Un bloc = **attention multi-têtes** + **MLP**, chacun suivi d'une **connexion r
 
 :::: {.columns}
 ::: {.column width="35%"}
-```{mermaid}
-%%| fig-width: 3
-flowchart BT
-    X["X (n × d_model)"] --> A["Attention multi-têtes"]
-    A --> N1(("⊕")) --> L1["LayerNorm"]
-    X -- résiduel --> N1
-    L1 --> F["MLP"]
-    F --> N2(("⊕")) --> L2["LayerNorm"]
-    L1 -- résiduel --> N2
-    L2 --> Y["Y (n × d_model)"]
-```
+<svg viewBox="0 0 290 530" width="100%" style="max-height:520px" role="img" aria-label="Schéma d'un bloc Transformer" font-size="16" text-anchor="middle" dominant-baseline="central">
+<defs><marker id="flecheT" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker></defs>
+<g stroke="#555" stroke-width="1.5" fill="none" marker-end="url(#flecheT)">
+<line x1="130" y1="480" x2="130" y2="442"/><line x1="130" y1="400" x2="130" y2="378"/><line x1="130" y1="342" x2="130" y2="322"/>
+<line x1="130" y1="280" x2="130" y2="242"/><line x1="130" y1="200" x2="130" y2="178"/><line x1="130" y1="142" x2="130" y2="122"/><line x1="130" y1="80" x2="130" y2="52"/>
+<path d="M130,462 H250 V360 H149" stroke-dasharray="5 3"/><path d="M130,262 H250 V160 H149" stroke-dasharray="5 3"/>
+</g>
+<g stroke-width="1.5">
+<rect x="40" y="480" width="180" height="40" rx="6" fill="#F3F3F1" stroke="#888780"/>
+<rect x="40" y="400" width="180" height="40" rx="6" fill="#EEEDFB" stroke="#7F77DD"/>
+<circle cx="130" cy="360" r="17" fill="#fff" stroke="#555"/>
+<rect x="40" y="280" width="180" height="40" rx="6" fill="#F3F3F1" stroke="#888780"/>
+<rect x="40" y="200" width="180" height="40" rx="6" fill="#E3F4EE" stroke="#1D9E75"/>
+<circle cx="130" cy="160" r="17" fill="#fff" stroke="#555"/>
+<rect x="40" y="80" width="180" height="40" rx="6" fill="#F3F3F1" stroke="#888780"/>
+<rect x="40" y="10" width="180" height="40" rx="6" fill="#F3F3F1" stroke="#888780"/>
+</g>
+<g fill="#222">
+<text x="130" y="500">X  (n × d_model)</text><text x="130" y="420">Attention multi-têtes</text><text x="130" y="361" font-size="20">+</text>
+<text x="130" y="300">LayerNorm</text><text x="130" y="220">MLP</text><text x="130" y="161" font-size="20">+</text>
+<text x="130" y="100">LayerNorm</text><text x="130" y="30">Y  (n × d_model)</text>
+</g>
+<g fill="#555" font-size="13" font-style="italic">
+<text transform="translate(266,411) rotate(-90)">résiduel</text><text transform="translate(266,211) rotate(-90)">résiduel</text>
+</g>
+</svg>
 :::
 
 ::: {.column width="65%"}
@@ -1055,15 +1070,30 @@ $$
 
 :::: {.columns}
 ::: {.column width="40%"}
-```{mermaid}
-%%| fig-width: 3.5
-flowchart TB
-    U["Objectif de l'utilisateur"] --> R["Raisonner<br/>(le LLM réfléchit)"]
-    R --> A["Agir<br/>(appel d'un outil)"]
-    A --> O["Observer<br/>(résultat de l'outil)"]
-    O --> R
-    R --> F["Réponse finale"]
-```
+<svg viewBox="0 0 420 400" width="100%" style="max-height:400px" role="img" aria-label="Boucle agentique : raisonner, agir, observer" font-size="16" text-anchor="middle" dominant-baseline="central">
+<defs><marker id="flecheA" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker></defs>
+<g stroke="#555" stroke-width="1.5" fill="none" marker-end="url(#flecheA)">
+<line x1="110" y1="56" x2="110" y2="108"/><line x1="210" y1="140" x2="258" y2="140"/><line x1="335" y1="170" x2="335" y2="238"/>
+<path d="M260,270 H160 V172"/><line x1="60" y1="170" x2="60" y2="328"/>
+</g>
+<g stroke-width="1.5">
+<rect x="10" y="10" width="200" height="46" rx="6" fill="#F3F3F1" stroke="#888780"/>
+<rect x="10" y="110" width="200" height="60" rx="6" fill="#EEEDFB" stroke="#7F77DD"/>
+<rect x="260" y="110" width="150" height="60" rx="6" fill="#E3F4EE" stroke="#1D9E75"/>
+<rect x="260" y="240" width="150" height="60" rx="6" fill="#FDF1DF" stroke="#EF9F27"/>
+<rect x="10" y="330" width="140" height="46" rx="6" fill="#F3F3F1" stroke="#888780"/>
+</g>
+<g fill="#222">
+<text x="110" y="33">Objectif de l'utilisateur</text>
+<text x="110" y="130" font-weight="bold">Raisonner</text><text x="110" y="153" font-size="13">(le LLM réfléchit)</text>
+<text x="335" y="130" font-weight="bold">Agir</text><text x="335" y="153" font-size="13">(appel d'un outil)</text>
+<text x="335" y="260" font-weight="bold">Observer</text><text x="335" y="283" font-size="13">(résultat de l'outil)</text>
+<text x="80" y="353">Réponse finale</text>
+</g>
+<g fill="#555" font-size="13" font-style="italic">
+<text x="205" y="288" font-size="12">ajouté au contexte</text><text x="68" y="250" text-anchor="start">si terminé</text>
+</g>
+</svg>
 :::
 
 ::: {.column width="60%"}
