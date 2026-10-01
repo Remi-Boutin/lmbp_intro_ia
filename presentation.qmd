@@ -57,6 +57,7 @@ jupyter: huggingface
 Plan : 
 
 - Historique
+- Apprentissage supervisé en quelques mots
 - Pré-traitement
 - Apprentissage de représentations : embeddings
 - Multi-layer perceptron (MLP)
@@ -78,6 +79,124 @@ Plan :
 - 2017 : Les Transformers (!)
 - 2018-2024 : L'ère des LLM pré-entraînés
 - 2024 - aujourd'hui : IA agentique 
+
+---
+
+## Apprentissage paramétrique
+
+**But :** trouver une fonction paramétrique qui approxime la relation entre les variables d'entrée et de sortie. 
+$$
+ y = f(\mathbf{x}; \theta)
+$$
+
+avec $\mathbf{x} \in \mathbb{R}^d$ une observation et $y \in \mathbb{R}$ la variable cible.
+
+**Exemple :** 
+
+- $\mathbf{x} \in \mathbb{R^{d\times d}}$ est une radiographie 
+- $y$ est une variable binaire avec 0 si le patient est *sain*, 0 s'il est *malade*. 
+
+
+**Procédure :**
+
+- Restriction à **une famille de fonctions paramétriques** 
+- on **ajuste** les paramètres $\theta \in \mathbb{R}^p$ pour minimiser une **fonction de perte** mesurant l'erreur entre les prédictions $\hat{y_i} = f(\mathbf{x}_i; \theta)$ et les observations $y_i$.
+
+**Exemples :**
+
+- fonctions linéaires (en ses paramètres), fonctions logistiques, perceptrons Multi-Couche
+
+**Comment fitter les paramètres ?** (aussi appelé **apprentissage**)
+
+
+--- 
+
+### A chaque problème ses fonctions de perte
+
+- **Régression** : A partir de $\mathbf{x}_i \in \mathbb{R}^d$, estimer une valeur **continue** $y_i \in \mathbb{R}$ (possiblement multi-dimensionnelle mais c'est la même idée). Fonction de perte classique associée : **les moindres carrés** : 
+$$
+L(\theta) = \sum_{i=1}^n (y_i - \hat{y}_i)^2 = \sum_{i=1}^n (y_i - f(\mathbf{x}_i; \theta))^2
+$$
+
+- **Classification** : A partir de $\mathbf{x}_i \in \mathbb{R}^d$, estimer le groupe auquel appartient $i$. Fonction de perte classique associée : **la cross-entropy**. Soit $y_i = (0, ..., 0 , 1, 0,...,0)$ avec un $1$ en k-ième position si $i$ appartient à la classe $k$, alors la cross-entropy s'écrit :
+
+$$
+\begin{align*}
+L(\theta) & = - \sum_{i=1}^n \log p(y_{i} \mid \mathbf{x}, \theta) \\
+& = - \sum_{i=1}^n \sum_{k=1}^K y_{ik} \log (\mathbf{x}_i; \theta) 
+\end{align*}
+$$
+
+où $\hat{y}_{i,k}$ est la **probabilité prédite** que l'individu $i$ appartienne à la classe $k$.
+
+---
+
+### Apprentissage supervisé : vue d'ensemble
+
+Exemple fil rouge : **prédire le mot suivant**.
+
+<svg viewBox="0 0 1000 520" width="100%" style="max-height:540px" role="img" aria-label="Schéma de l'apprentissage supervisé : phase d'apprentissage et phase de test" font-size="17" text-anchor="middle" dominant-baseline="central">
+<defs><marker id="flecheS" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker></defs>
+<rect x="5" y="5" width="990" height="285" rx="10" fill="#F7F6FD"/>
+<rect x="5" y="305" width="990" height="210" rx="10" fill="#FFF8EE"/>
+<g font-weight="bold" font-size="19" text-anchor="start" fill="#333">
+<text x="22" y="30">Phase d'apprentissage</text><text x="22" y="330">Phase de test</text>
+</g>
+<g stroke="#555" stroke-width="1.5" fill="none" marker-end="url(#flecheS)">
+<line x1="230" y1="115" x2="268" y2="115"/><line x1="480" y1="115" x2="518" y2="115"/><line x1="730" y1="115" x2="768" y2="115"/>
+<path d="M875,175 V235 H375 V178"/>
+<line x1="320" y1="175" x2="320" y2="353" stroke-dasharray="5 3"/>
+<line x1="230" y1="415" x2="268" y2="415"/><line x1="480" y1="415" x2="518" y2="415"/><line x1="730" y1="415" x2="768" y2="415"/>
+</g>
+<g stroke-width="1.5">
+<rect x="20" y="55" width="210" height="120" rx="8" fill="#F3F3F1" stroke="#888780"/>
+<rect x="270" y="55" width="210" height="120" rx="8" fill="#EEEDFB" stroke="#7F77DD"/>
+<rect x="520" y="55" width="210" height="120" rx="8" fill="#FDF1DF" stroke="#EF9F27"/>
+<rect x="770" y="55" width="210" height="120" rx="8" fill="#E3F4EE" stroke="#1D9E75"/>
+<rect x="20" y="355" width="210" height="120" rx="8" fill="#F3F3F1" stroke="#888780"/>
+<rect x="270" y="355" width="210" height="120" rx="8" fill="#EEEDFB" stroke="#7F77DD"/>
+<rect x="520" y="355" width="210" height="120" rx="8" fill="#FDF1DF" stroke="#EF9F27"/>
+<rect x="770" y="355" width="210" height="120" rx="8" fill="#fff" stroke="#555"/>
+</g>
+<g fill="#222">
+<text x="125" y="78" font-weight="bold" font-size="15.5">Données d'entraînement</text><text x="125" y="106">(x, y)</text>
+<text x="375" y="78" font-weight="bold">Prédiction</text><text x="375" y="106">ŷ = f(x ; θ)</text>
+<text x="625" y="78" font-weight="bold">Fonction de perte</text><text x="625" y="106">L(θ)</text>
+<text x="875" y="78" font-weight="bold">Rétropropagation</text><text x="875" y="106">θ ← θ − η ∇L(θ)</text>
+<text x="125" y="378" font-weight="bold">Données de test</text><text x="125" y="406">(x<tspan dy="5" font-size="13">test</tspan><tspan dy="-5">, y</tspan><tspan dy="5" font-size="13">test</tspan><tspan dy="-5">)</tspan></text>
+<text x="375" y="378" font-weight="bold">Modèle figé</text><text x="375" y="406">ŷ = f(x<tspan dy="5" font-size="13">test</tspan><tspan dy="-5"> ; θ̂)</tspan></text>
+<text x="625" y="378" font-weight="bold">Évaluation</text><text x="625" y="406">L<tspan dy="5" font-size="13">test</tspan><tspan dy="-5">(θ̂)</tspan></text>
+<text x="875" y="378" font-weight="bold">Diagnostic</text>
+</g>
+<g fill="#555" font-size="14" font-style="italic">
+<text x="125" y="136">x = « Le chat noir »</text><text x="125" y="156">y = « dort »</text>
+<text x="375" y="136">p(dort | x) = 0.2</text><text x="375" y="156">p(mange | x) = 0.5</text>
+<text x="625" y="136">− log p(dort | x)</text><text x="625" y="156">= − log 0.2 ≈ 1.6</text>
+<text x="875" y="136">→ p(dort | x) augmente</text><text x="875" y="156">→ L(θ) diminue</text>
+<text x="625" y="255">on recommence sur tout le jeu de données, jusqu'à convergence</text>
+<text x="330" y="272" text-anchor="start">θ̂ final</text>
+<text x="125" y="436">jamais vues pendant</text><text x="125" y="456">l'apprentissage</text>
+<text x="375" y="436">« Le soleil » → ?</text><text x="375" y="456">θ̂ n'est plus modifié</text>
+<text x="625" y="436">ex : perplexité sur</text><text x="625" y="456">des textes inédits</text>
+</g>
+<g font-size="14">
+<text x="875" y="402" fill="#222">L<tspan dy="4" font-size="11">test</tspan><tspan dy="-4"> ≈ L</tspan><tspan dy="4" font-size="11">train</tspan></text>
+<text x="875" y="421" fill="#1D9E75" font-weight="bold">✓ a appris les motifs</text>
+<text x="875" y="443" fill="#222">L<tspan dy="4" font-size="11">test</tspan><tspan dy="-4"> ≫ L</tspan><tspan dy="4" font-size="11">train</tspan></text>
+<text x="875" y="462" fill="#C0392B" font-weight="bold">✗ a appris par cœur</text>
+</g>
+</svg>
+
+:::{.notes}
+- Le jeu de test ne doit **jamais** servir à choisir les paramètres, sinon l'évaluation est biaisée.
+- Sur-apprentissage (*overfitting*) : le modèle mémorise les exemples d'entraînement au lieu d'apprendre les régularités qui permettent de généraliser.
+- Pour un LLM, l'étiquette $y$ est simplement le mot suivant dans le texte : pas besoin d'annotation (apprentissage auto-supervisé).
+:::
+
+---
+
+# Traitement automatique du langage
+
 
 ---
 
