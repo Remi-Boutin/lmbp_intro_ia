@@ -1,5 +1,5 @@
 ---
-title: "Introduction aux modèles de langage profonds et leurs extensions."
+title: "Introduction aux modèles de langage profonds et aux agents"
 author: "Rémi Boutin"
 format:
     revealjs:
@@ -64,17 +64,15 @@ execute:
 
 ---
 
-Plan : 
+### Organisation de la présentation
 
 - Historique
 - Apprentissage supervisé en quelques mots
 - Pré-traitement
-- Apprentissage de représentations : embeddings
-- Multi-layer perceptron (MLP)
+- Apprentissage de représentations & Multi-layer perceptron (MLP)
 - Mécanisme d'(auto-)attention
-- (Decoder) Transformer
-- Autoregressive generation
-
+- (Decoder) Transformer & génération autorégressive
+- Agent & LLM
 
 ---
 
@@ -83,8 +81,8 @@ Plan :
 
 
 - 1950 - 2000 : Approches symboliques (ensemble de règles édictées à l'avance)
-- 2000 - 2012 : Déput du Deep Learning 
-    - Yann Le Cun propose la reconnaissance de chiffres écrits à la main
+- 2000 - 2012 : Début du Deep Learning 
+    - Yann LeCun propose la reconnaissance de chiffres écrits à la main
     - RNN puis LSTM pour obtenir des réseaux prenant en compte les dépendances entre éléments éloignés d'un texte
 - 2017 : Les Transformers (!)
 - 2018-2024 : L'ère des LLM pré-entraînés
@@ -104,7 +102,7 @@ avec $\mathbf{x} \in \mathbb{R}^d$ une observation et $y \in \mathbb{R}$ la vari
 **Exemple :** 
 
 - $\mathbf{x} \in \mathbb{R^{d\times d}}$ est une radiographie 
-- $y$ est une variable binaire avec 0 si le patient est *sain*, 0 s'il est *malade*. 
+- $y$ est une variable binaire avec 0 si le patient est *sain*, 1 s'il est *malade*. 
 
 
 **Procédure :**
@@ -114,26 +112,26 @@ avec $\mathbf{x} \in \mathbb{R}^d$ une observation et $y \in \mathbb{R}$ la vari
 
 **Exemples :**
 
-- fonctions linéaires (en ses paramètres), fonctions logistiques, perceptrons Multi-Couche
+- fonctions linéaires (en ses paramètres), fonctions logistiques, perceptrons multicouches
 
 **Comment fitter les paramètres ?** (aussi appelé **apprentissage**)
 
 
 --- 
 
-### A chaque problème ses fonctions de perte
+### À chaque problème ses fonctions de perte
 
-- **Régression** : A partir de $\mathbf{x}_i \in \mathbb{R}^d$, estimer une valeur **continue** $y_i \in \mathbb{R}$ (possiblement multi-dimensionnelle mais c'est la même idée). Fonction de perte classique associée : **les moindres carrés** : 
+- **Régression** : À partir de $\mathbf{x}_i \in \mathbb{R}^d$, estimer une valeur **continue** $y_i \in \mathbb{R}$ (possiblement multidimensionnelle mais c'est la même idée). Fonction de perte classique associée : **les moindres carrés** : 
 $$
 L(\theta) = \sum_{i=1}^n (y_i - \hat{y}_i)^2 = \sum_{i=1}^n (y_i - f(\mathbf{x}_i; \theta))^2
 $$
 
-- **Classification** : A partir de $\mathbf{x}_i \in \mathbb{R}^d$, estimer le groupe auquel appartient $i$. Fonction de perte classique associée : **la cross-entropy**. Soit $y_i = (0, ..., 0 , 1, 0,...,0)$ avec un $1$ en k-ième position si $i$ appartient à la classe $k$, alors la cross-entropy s'écrit :
+- **Classification** : À partir de $\mathbf{x}_i \in \mathbb{R}^d$, estimer le groupe auquel appartient $i$. Fonction de perte classique associée : **la cross-entropy**. Soit $y_i = (0, ..., 0 , 1, 0,...,0)$ avec un $1$ en k-ième position si $i$ appartient à la classe $k$, alors la cross-entropy s'écrit :
 
 $$
 \begin{align*}
-L(\theta) & = - \sum_{i=1}^n \log p(y_{i} \mid \mathbf{x}, \theta) \\
-& = - \sum_{i=1}^n \sum_{k=1}^K y_{ik} \log (\mathbf{x}_i; \theta) 
+L(\theta) & = - \sum_{i=1}^n \log p(y_{i} \mid \mathbf{x}_i, \theta) \\
+& = - \sum_{i=1}^n \sum_{k=1}^K y_{ik} \log f(\mathbf{x}_i; \theta)_k 
 \end{align*}
 $$
 
@@ -234,7 +232,7 @@ Exemple fil rouge : **prédire le mot suivant**.
 
 ### Pré-traitement du texte
 
-![Preprocesing, crédits hugging face](images/LMBP_pre_processing.png){width=80%}
+![Preprocessing, crédits Hugging Face](images/LMBP_pre_processing.png){width=80%}
 
 :::{.notes}
 construction des briques élémentaires du modèle
@@ -246,12 +244,12 @@ construction des briques élémentaires du modèle
 La **tokenization** est le processus de découpage d'un texte en unités plus petites appelées **tokens**. Ces tokens peuvent être des mots, des sous-mots ou même des caractères, selon la granularité choisie : 
 
 ::: {.fragment}
-- **charactères** : dur de capturer une semantique mais petit en taille 
+- **caractères** : dur de capturer une sémantique mais petit en taille 
 "Le chat dort." -> "L", "e", " ", "c", "h", "a", "t", " ", "d", "o", "r", "t", "."
 :::
 
 ::: {.fragment}
-- **mots** : très grand en taille, certaines informations sont redondantes "long", "longeur"
+- **mots** : très grand en taille, certaines informations sont redondantes "long", "longueur"
 "Le chat dort." -> "Le", "chat", "dort."
 :::
 
@@ -293,7 +291,7 @@ L'unité élémentaire est le **token** !
 
 
 :::{.notes}
-On a résolu les limitations des approches précédentes: 
+On a résolu les limitations des approches précédentes : 
 
 - mots inconnus (out-of-vocabulary words)
 - il y en a beaucoup
@@ -306,11 +304,11 @@ On a résolu les limitations des approches précédentes:
 
 ### Embeddings et le perceptron multicouche
 
-- Un embedding est une **représentation vectoriel**, d'un token ou tout autre objet (image, graphe, etc...) dans un espace vectoriel (appelé **espace latent**), souvent $\mathbb{R}^d$.
+- Un embedding est une **représentation vectorielle**, d'un token ou tout autre objet (image, graphe, etc.) dans un espace vectoriel (appelé **espace latent**), souvent $\mathbb{R}^d$.
 
 - On différencie les embeddings (représentations continues, aussi appelées denses) des représentations discrètes (sparse / creuses).
 
-- **But :** représenter chaque tokens dans un **espace latent** en encodant **les concepts** et **les sens sémantiques** comme directions dans cet espace.
+- **But :** représenter chaque token dans un **espace latent** en encodant **les concepts** et **les sens sémantiques** comme directions dans cet espace.
 
 
 
@@ -572,7 +570,7 @@ Un RNN traite les données **séquentiellement**, token par token, en maintenant
 
 ---
 
-### Limitation des méthodes précédentes
+### Limitations des méthodes précédentes
 
 **Résumé :**
 
@@ -590,11 +588,11 @@ Un RNN traite les données **séquentiellement**, token par token, en maintenant
 
 ### Mécanisme d'attention
 
-**D'un point de vu haut niveau :** 
+**D'un point de vue haut niveau :** 
 
-- **Input :** une suite d'embeddings $(\mathbf{x}_1, \dots, \mathbf{x}_d)$, un pour chaque tokens 
+- **Input :** une suite d'embeddings $(\mathbf{x}_1, \dots, \mathbf{x}_n)$, un pour chaque token 
 
-- **Output :** une nouvelle matrice où chaque embeddings a été mis à jour grâce à l'information contenue dans les autres embeddings de tokens. 
+- **Output :** une nouvelle matrice où chaque embedding a été mis à jour grâce à l'information contenue dans les autres embeddings de tokens. 
 
 
 ---
@@ -637,7 +635,7 @@ Plus la clé (K) correspond à la requête (Q), plus on prend sa valeur (V) ! �
 ### Mécanisme d'attention
 
 ::: {.callout-note title=Définition}
-**Mécanisme d'attention :** Un mécanisme d'attention est une fonction différentiable $\mathcal{A}: \mathbb{R}^d_q \times \mathbb{R}^{n \times d_k } \times \mathbb{R}^{n \times d_v} \rightarrow \mathbb{R}^{d_v}$ qui prend en entrée une requête, une clé et une valeur, et retourne une combinaison pondérée des valeurs basée sur la *compatibilité* entre les requêtes et les clées.
+**Mécanisme d'attention :** Un mécanisme d'attention est une fonction différentiable $\mathcal{A}: \mathbb{R}^{d_q} \times \mathbb{R}^{n \times d_k } \times \mathbb{R}^{n \times d_v} \rightarrow \mathbb{R}^{d_v}$ qui prend en entrée une requête, une clé et une valeur, et retourne une combinaison pondérée des valeurs basée sur la *compatibilité* entre les requêtes et les clés.
 :::
 
 **Notations :**
@@ -667,7 +665,7 @@ Il existe plusieurs variantes du mécanisme d'attention, notamment :
 - Attention *dot-product* : $\text{score}(\mathbf{q}, \mathbf{k}_i) = \mathbf{q}^\top \mathbf{k}_i$
 - Attention *scaled dot-product* : $\text{score}(\mathbf{q}, \mathbf{k}_i) = \frac{\mathbf{q}^\top \mathbf{k}_i}{\sqrt{d_k}}$
 
-<button class="collapse-button">▶ Pourquoi diviser par $\sqrt{d_k}</button>
+<button class="collapse-button">▶ Pourquoi diviser par $\sqrt{d_k}$</button>
 <div class="collapse-content">
 Supposons que les coordonnées de $\mathbf{q}$ et $\mathbf{k}$ soient indépendantes, de moyenne $0$ et de variance $1$. Alors :
 
@@ -687,11 +685,11 @@ Les dérivées de la softmax sont alors quasi nulles : **le gradient ne passe pl
 - Attention multi-têtes (multi-head attention) que l'on verra plus tard.
 
 :::{.notes}
-Etapé 1 - Calcul du score : pr chaque position $i$, la scalaire $e_i$ indique la compatibilité, ou pertinence, ou similarité, de la requête $\mathbf{q}$ avec la clé $\mathbf{k}_i$.
+Étape 1 - Calcul du score : pour chaque position $i$, le scalaire $e_i$ indique la compatibilité, ou pertinence, ou similarité, de la requête $\mathbf{q}$ avec la clé $\mathbf{k}_i$.
 
-Etapé 2 - Application de la softmax : les scores sont normalisés pour obtenir des poids / une distribution de probabilité sur les valeurs.
+Étape 2 - Application de la softmax : les scores sont normalisés pour obtenir des poids / une distribution de probabilité sur les valeurs.
 
-Etapé 3 - Combinaison des valeurs : les valeurs $\mathbf{v}_i$ sont pondérées par les poids d'attention $\alpha_i$ pour obtenir la représentation finale de la requête.
+Étape 3 - Combinaison des valeurs : les valeurs $\mathbf{v}_i$ sont pondérées par les poids d'attention $\alpha_i$ pour obtenir la représentation finale de la requête.
 
 - Rappel : la dérivée de la softmax est $\frac{\partial \alpha_i}{\partial e_j} = \alpha_i(\delta_{ij} - \alpha_j)$, qui tend vers 0 quand un des $\alpha$ tend vers 1.
 :::
@@ -705,7 +703,6 @@ Version matricielle pour plusieurs requêtes :
 $$
 Attention(\mathbf{Q}, \mathbf{K}, \mathbf{V}) = \text{softmax}\left(\frac{\mathbf{Q}\mathbf{K}^\top}{\sqrt{d_k}}\right)\mathbf{V} \in \mathbb{R^{m \times d_v}}
 $$
-- 
 
 avec 
 
@@ -723,7 +720,7 @@ avec
 ### Mécanisme d'auto-attention 
 
 ::: {.callout-note title=Définition}
-Etant donné une matrice d'entrées $\mathbf{X} \in \mathbb{R}^{n \times d_{model}}$ où $n$ est la taille de l'entrée, et $d_{model}$ est la dimension du modèle, le mécanisme d'auto-attention calcule les requêtes, clés et valeurs à partir de $\mathbf{X}$ :
+Étant donné une matrice d'entrées $\mathbf{X} \in \mathbb{R}^{n \times d_{model}}$ où $n$ est la taille de l'entrée, et $d_{model}$ est la dimension du modèle, le mécanisme d'auto-attention calcule les requêtes, clés et valeurs à partir de $\mathbf{X}$ :
 
 $$
 \mathbf{Q} = \mathbf{X}\color{darkred}{\mathbf{W}_Q}, \quad \mathbf{K} = \mathbf{X} \color{darkred}{\mathbf{W}_K}, \quad \mathbf{V} = \mathbf{X}\color{darkred}{\mathbf{W}_V}
@@ -731,7 +728,7 @@ $$
 
 où $\color{darkred}{\mathbf{W}_Q} \in \mathbb{R}^{d_{model} \times d_k}, \quad \color{darkred}{\mathbf{W}_K} \in \mathbb{R}^{d_{model} \times d_k}, \quad \color{darkred}{\mathbf{W}_V} \in \mathbb{R}^{d_{model} \times d_v}$ sont des matrices de paramètres à estimer. 
 
-Le mécanisme d'auto-attention (pour le *scaled dot-product*) est donnée par
+Le mécanisme d'auto-attention (pour le *scaled dot-product*) est donné par
 $$
 \text{Attention}_{\theta}(\mathbf{Q}, \mathbf{K}, \mathbf{V}) = \text{softmax}\left(\frac{\mathbf{Q}\mathbf{K}^\top}{\sqrt{d_k}}\right)\mathbf{V}
 $$
@@ -763,7 +760,7 @@ avec $\theta = \{\mathbf{W}_Q, \mathbf{W}_K, \mathbf{W}_V\}$.
 On calcule $h$ attentions **en parallèle** (les *têtes*), chacune avec ses propres paramètres, puis on concatène les résultats :
 
 $$
-\text{head}_i = \text{Attention}(\mathbf{X}\color{darkred}{\mathbf{W}_Q^{(i)}}, \mathbf{X}\color{darkred}{\mathbf{W}_K^{(i)}}, \mathbf{X}\color{darkred}{\mathbf{W}_V^{(i)}}) \in \mathbb{R}^{n \times d_v}
+\text{head}_i = \text{SelfAttention}_i(\mathbf{X}) = \text{Attention}(\mathbf{X}\color{darkred}{\mathbf{W}_Q^{(i)}}, \mathbf{X}\color{darkred}{\mathbf{W}_K^{(i)}}, \mathbf{X}\color{darkred}{\mathbf{W}_V^{(i)}}) \in \mathbb{R}^{n \times d_v}
 $$
 
 $$
@@ -957,7 +954,7 @@ La matrice $\mathbf{Q}\mathbf{K}^\top \in \mathbb{R}^{n \times n}$ a un coût **
 
 *Attention Is All You Need* (Vaswani et al., 2017), conçu pour la **traduction** :
 
-![Encodeur-Decodeur pour la traduction, credits *Vaswani et al., 2017*](images/transformer_architecture.png){width=300%}
+![Encodeur-décodeur pour la traduction, crédits *Vaswani et al., 2017*](images/transformer_architecture.png){width=300%}
 
 
 
@@ -1000,14 +997,14 @@ La sortie à la position $i$ ne dépend que de $\mathbf{x}_1, \dots, \mathbf{x}_
 :::
 
 :::{.notes}
-- c'est un avantage lors de l'entraînement mais pas lors de la génération de texte ! 
+- C'est un avantage lors de l'entraînement mais pas lors de la génération de texte ! 
 :::
 
 ---
 
 ![Petit historique des modèles basés sur des transformers, crédits à Hugging Face](images/transformer_historic.png){width=80%}
 
-L'évolution des modèles de langage reposant sur les transformers s'accompagne de différence entre les modèles : 
+L'évolution des modèles de langage reposant sur les transformers s'accompagne de différences entre les modèles : 
 
 - ceux de type GPT (aussi appelés transformers autorégressifs)
 - ceux de type BERT (aussi appelés transformers auto-encodeurs)
@@ -1284,11 +1281,17 @@ $$
 On retrouve les **embeddings** du début de la présentation : des textes proches en sens ont des vecteurs proches.
 :::
 
+---
 
-# Fin de la présentation
+### Merci pour votre attention 
 
 
+**Références :**
 
+- The Hugging Face Course (2022), [Lien](https://huggingface.co/course)
+- Large Language Model Course, MVA, David Louapre and Nathanaël Fijalkow (2026), [Lien](https://github.com/nathanael-fijalkow/LLM-Course)
+- Attention mechanisms in neural networks, Hasi Hays (2026), [Lien](https://arxiv.org/pdf/2601.03329)
+- LLM pour les figures et l'amélioration de l'aspect visuel
 
 ---
 
@@ -1330,6 +1333,7 @@ $$
 $$
 
 </div>
+
 ---
 
 ### Limitations des RNN/LSTM
@@ -1347,7 +1351,7 @@ $$
 :::
 
 ::: {.callout-important}
-4. **Inégalité positionnelle** : Les tokens au début d'une longue séquence ont moins d'influence sur les tokens à la fin (problème du **dilution de l'information**)
+4. **Inégalité positionnelle** : Les tokens au début d'une longue séquence ont moins d'influence sur les tokens à la fin (problème de **dilution de l'information**)
 :::
 
 **Exemple concret :**
