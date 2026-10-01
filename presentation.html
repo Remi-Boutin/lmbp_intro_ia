@@ -5830,6 +5830,156 @@ display:block!important;
 </section>
 <section class="slide level2 center">
 
+<h3 id="larchitecture-de-gpt-2-small">L’architecture de GPT-2 (small)</h3>
+<div class="columns">
+<div class="column" style="width:47%;">
+<svg viewbox="0 0 460 625" width="100%" style="max-height:590px" role="img" aria-label="Architecture de GPT-2 small" font-size="14" text-anchor="middle" dominant-baseline="central">
+<defs><marker id="flG2" viewbox="0 0 10 10" refx="9" refy="5" markerwidth="6" markerheight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555" /></marker></defs> <rect x="56" y="156" width="320" height="292" rx="10" fill="#fafafa" stroke="#bbb" stroke-width="1.2" /> <rect x="48" y="164" width="320" height="292" rx="10" fill="#fafafa" stroke="#bbb" stroke-width="1.2" /> <rect x="40" y="172" width="320" height="292" rx="10" fill="#fafafa" stroke="#888" stroke-width="1.5" /> <text x="384" y="168" text-anchor="start" font-weight="bold" font-size="17" fill="#7F77DD">× 12</text> <text x="384" y="188" text-anchor="start" font-size="13" fill="#7F77DD">blocs</text> <g stroke="#555" stroke-width="1.5" fill="none" marker-end="url(#flG2)"> <line x1="185" y1="212" x2="185" y2="224"></line> <line x1="185" y1="286" x2="185" y2="291"></line> <line x1="185" y1="317" x2="185" y2="320"></line> <line x1="185" y1="348" x2="185" y2="360"></line> <line x1="185" y1="422" x2="185" y2="427"></line> <line x1="200" y1="504" x2="200" y2="518"></line> <line x1="200" y1="558" x2="200" y2="572"></line> <line x1="122" y1="48" x2="122" y2="64"></line><line x1="278" y1="48" x2="278" y2="64"></line> <line x1="122" y1="116" x2="190" y2="134"></line><line x1="278" y1="116" x2="210" y2="134"></line> <path d="M200,152 V166 H185 V184" /> <path d="M185,178 H330 V302 H198" stroke-dasharray="5 3" /><path d="M185,318 H330 V438 H198" stroke-dasharray="5 3" /> <path d="M185,450 V470 H200 V478" /> </g> <rect x="50" y="8" width="300" height="40" rx="6" fill="#F3F3F1" stroke="#888780" stroke-width="1.5" /> <text x="200.0" y="19.5" font-weight="bold">Tokens (BPE)</text> <text x="200.0" y="36.5" font-size="12.5" fill="#444">x₁, …, xₙ avec n ≤ 1 024</text> <rect x="50" y="66" width="145" height="50" rx="6" fill="#F3F3F1" stroke="#888780" stroke-width="1.5" /> <text x="122.5" y="82.5" font-weight="bold">Embedding token</text> <text x="122.5" y="99.5" font-size="12.5" fill="#444">W<tspan dy="4" font-size="0.75em">E</tspan><tspan dy="-4">​</tspan> : 50 257 × 768</text> <rect x="205" y="66" width="145" height="50" rx="6" fill="#F3F3F1" stroke="#888780" stroke-width="1.5" /> <text x="277.5" y="82.5" font-weight="bold">Position</text> <text x="277.5" y="99.5" font-size="12.5" fill="#444">W<tspan dy="4" font-size="0.75em">P</tspan><tspan dy="-4">​</tspan> : 1 024 × 768</text> <circle cx="200" cy="140" r="12" fill="#fff" stroke="#555" stroke-width="1.5"></circle><text x="200" y="141" font-size="18">+</text> <rect x="70" y="186" width="230" height="26" rx="6" fill="#ffffff" stroke="#888780" stroke-width="1.5" /> <text x="185.0" y="199.0" font-weight="bold">LayerNorm</text> <rect x="70" y="226" width="230" height="60" rx="6" fill="#EEEDFB" stroke="#7F77DD" stroke-width="1.5" /> <text x="185.0" y="239.0" font-weight="bold">Attention masquée</text> <text x="185.0" y="256.0" font-size="12.5" fill="#444">12 têtes × 64 · QKᵀ : n × n</text> <text x="185.0" y="273.0" font-size="12.5" fill="#444">W<tspan dy="4" font-size="0.75em">Q,K,V,O</tspan><tspan dy="-4">​</tspan> : 768 × 768</text> <circle cx="185" cy="302" r="12" fill="#fff" stroke="#555" stroke-width="1.5"></circle><text x="185" y="303" font-size="18">+</text> <rect x="70" y="322" width="230" height="26" rx="6" fill="#ffffff" stroke="#888780" stroke-width="1.5" /> <text x="185.0" y="335.0" font-weight="bold">LayerNorm</text> <rect x="70" y="362" width="230" height="60" rx="6" fill="#E3F4EE" stroke="#1D9E75" stroke-width="1.5" /> <text x="185.0" y="375.0" font-weight="bold">MLP (GELU)</text> <text x="185.0" y="392.0" font-size="12.5" fill="#444">768 → 3 072 → 768</text> <text x="185.0" y="409.0" font-size="12.5" fill="#444">par token, mêmes poids</text> <circle cx="185" cy="438" r="12" fill="#fff" stroke="#555" stroke-width="1.5"></circle><text x="185" y="439" font-size="18">+</text> <g font-size="11.5" fill="#666" font-style="italic"><text transform="translate(343,240) rotate(-90)">résiduel</text><text transform="translate(343,374) rotate(-90)">résiduel</text></g> <rect x="50" y="480" width="300" height="24" rx="6" fill="#ffffff" stroke="#888780" stroke-width="1.5" /> <text x="200.0" y="492.0" font-weight="bold">LayerNorm finale</text> <rect x="50" y="520" width="300" height="38" rx="6" fill="#FDF1DF" stroke="#EF9F27" stroke-width="1.5" /> <text x="200.0" y="530.5" font-weight="bold">Projection : W<tspan dy="4" font-size="0.75em">E</tspan><tspan dy="-4">​</tspan>ᵀ</text> <text x="200.0" y="547.5" font-size="12.5" fill="#444">768 × 50 257 (poids partagés)</text> <rect x="50" y="574" width="300" height="40" rx="6" fill="#FDF1DF" stroke="#EF9F27" stroke-width="1.5" /> <text x="200.0" y="585.5" font-weight="bold">Softmax</text> <text x="200.0" y="602.5" font-size="12.5" fill="#444">p(xₙ₊₁ | x₁, …, xₙ) sur 50 257 tokens</text>
+</svg>
+</div><div class="column" style="width:53%;">
+<div style="font-size: 80%;">
+<p><em>Radford et al., 2019</em> : (modèle <code>gpt2</code> de Hugging Face, utilisé au début de la présentation)</p>
+<p><strong>Hyperparamètres :</strong></p>
+<ul>
+<li><span class="math inline">\(L = 12\)</span> blocs,</li>
+<li><span class="math inline">\(d_{model} = 768\)</span>, <span class="math inline">\(h = 12\)</span> têtes de dimension <span class="math inline">\(64\)</span>,</li>
+<li><span class="math inline">\(d_{ff} = 3\,072\)</span>,</li>
+<li>vocabulaire <span class="math inline">\(|\mathcal{V}| = 50\,257\)</span>, contexte de <span class="math inline">\(1\,024\)</span> tokens.</li>
+</ul>
+<table class="caption-top">
+<thead>
+<tr class="header">
+<th>Composant</th>
+<th style="text-align: right;">Paramètres</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Embeddings de tokens (<span class="math inline">\(50\,257 \times 768\)</span>)</td>
+<td style="text-align: right;">38,6 M</td>
+</tr>
+<tr class="even">
+<td>Embeddings de positions (<span class="math inline">\(1\,024 \times 768\)</span>)</td>
+<td style="text-align: right;">0,8 M</td>
+</tr>
+<tr class="odd">
+<td>1 bloc : attention (<span class="math inline">\(4d^2\)</span> + biais)</td>
+<td style="text-align: right;">2,36 M</td>
+</tr>
+<tr class="even">
+<td>1 bloc : MLP (<span class="math inline">\(8d^2\)</span> + biais)</td>
+<td style="text-align: right;">4,72 M</td>
+</tr>
+<tr class="odd">
+<td>1 bloc : 2 LayerNorm</td>
+<td style="text-align: right;">0,003 M</td>
+</tr>
+<tr class="even">
+<td><strong>12 blocs</strong></td>
+<td style="text-align: right;"><strong>85,1 M</strong></td>
+</tr>
+<tr class="odd">
+<td><strong>Total</strong></td>
+<td style="text-align: right;"><strong>124,4 M</strong></td>
+</tr>
+</tbody>
+</table>
+<p>Famille GPT-2 : 124 M, 355 M, 774 M et 1,5 Md de paramètres (12, 24, 36 et 48 blocs).</p>
+</div>
+</div></div>
+<aside class="notes">
+<ul>
+<li>Le total de 124 439 808 paramètres a été vérifié en comptant les paramètres du modèle <code>gpt2</code> de Hugging Face. L’article GPT-2 annonce 117 M pour ce modèle (erreur de comptage corrigée depuis).</li>
+<li>Par rapport à GPT-1 : la LayerNorm est placée <strong>avant</strong> chaque sous-couche (pre-LN) et une LayerNorm finale est ajoutée (section 2.3 de l’article).</li>
+<li>La projection de sortie réutilise la matrice des embeddings <span class="math inline">\(\mathbf{W}_E\)</span> (<em>weight tying</em>) : elle n’ajoute aucun paramètre.</li>
+<li>Entraîné sur WebText (environ 40 Go de texte issus de liens Reddit).</li>
+</ul>
+<style type="text/css">
+span.MJX_Assistive_MathML {
+position:absolute!important;
+clip: rect(1px, 1px, 1px, 1px);
+padding: 1px 0 0 0!important;
+border: 0!important;
+height: 1px!important;
+width: 1px!important;
+overflow: hidden!important;
+display:block!important;
+}</style></aside>
+</section>
+<section class="slide level2 center">
+
+<h3 id="larchitecture-de-gpt-3-175-md">L’architecture de GPT-3 (175 Md)</h3>
+<div class="columns">
+<div class="column" style="width:50%;">
+<svg viewbox="0 0 460 625" width="100%" style="max-height:590px" role="img" aria-label="Architecture de GPT-3 175B" font-size="14" text-anchor="middle" dominant-baseline="central">
+<defs><marker id="flG3" viewbox="0 0 10 10" refx="9" refy="5" markerwidth="6" markerheight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555" /></marker></defs> <rect x="56" y="156" width="320" height="292" rx="10" fill="#fafafa" stroke="#bbb" stroke-width="1.2" /> <rect x="48" y="164" width="320" height="292" rx="10" fill="#fafafa" stroke="#bbb" stroke-width="1.2" /> <rect x="40" y="172" width="320" height="292" rx="10" fill="#fafafa" stroke="#888" stroke-width="1.5" /> <text x="384" y="168" text-anchor="start" font-weight="bold" font-size="17" fill="#7F77DD">× 96</text> <text x="384" y="188" text-anchor="start" font-size="13" fill="#7F77DD">blocs</text> <g stroke="#555" stroke-width="1.5" fill="none" marker-end="url(#flG3)"> <line x1="185" y1="212" x2="185" y2="224"></line> <line x1="185" y1="286" x2="185" y2="291"></line> <line x1="185" y1="317" x2="185" y2="320"></line> <line x1="185" y1="348" x2="185" y2="360"></line> <line x1="185" y1="422" x2="185" y2="427"></line> <line x1="200" y1="504" x2="200" y2="518"></line> <line x1="200" y1="558" x2="200" y2="572"></line> <line x1="122" y1="48" x2="122" y2="64"></line><line x1="278" y1="48" x2="278" y2="64"></line> <line x1="122" y1="116" x2="190" y2="134"></line><line x1="278" y1="116" x2="210" y2="134"></line> <path d="M200,152 V166 H185 V184" /> <path d="M185,178 H330 V302 H198" stroke-dasharray="5 3" /><path d="M185,318 H330 V438 H198" stroke-dasharray="5 3" /> <path d="M185,450 V470 H200 V478" /> </g> <rect x="50" y="8" width="300" height="40" rx="6" fill="#F3F3F1" stroke="#888780" stroke-width="1.5" /> <text x="200.0" y="19.5" font-weight="bold">Tokens (BPE)</text> <text x="200.0" y="36.5" font-size="12.5" fill="#444">x₁, …, xₙ avec n ≤ 2 048</text> <rect x="50" y="66" width="145" height="50" rx="6" fill="#F3F3F1" stroke="#888780" stroke-width="1.5" /> <text x="122.5" y="82.5" font-weight="bold">Embedding token</text> <text x="122.5" y="99.5" font-size="12.5" fill="#444">W<tspan dy="4" font-size="0.75em">E</tspan><tspan dy="-4">​</tspan> : 50 257 × 12 288</text> <rect x="205" y="66" width="145" height="50" rx="6" fill="#F3F3F1" stroke="#888780" stroke-width="1.5" /> <text x="277.5" y="82.5" font-weight="bold">Position</text> <text x="277.5" y="99.5" font-size="12.5" fill="#444">W<tspan dy="4" font-size="0.75em">P</tspan><tspan dy="-4">​</tspan> : 2 048 × 12 288</text> <circle cx="200" cy="140" r="12" fill="#fff" stroke="#555" stroke-width="1.5"></circle><text x="200" y="141" font-size="18">+</text> <rect x="70" y="186" width="230" height="26" rx="6" fill="#ffffff" stroke="#888780" stroke-width="1.5" /> <text x="185.0" y="199.0" font-weight="bold">LayerNorm</text> <rect x="70" y="226" width="230" height="60" rx="6" fill="#EEEDFB" stroke="#7F77DD" stroke-width="1.5" /> <text x="185.0" y="239.0" font-weight="bold">Attention masquée</text> <text x="185.0" y="256.0" font-size="12.5" fill="#444">96 têtes × 128 · QKᵀ : n × n</text> <text x="185.0" y="273.0" font-size="12.5" fill="#444">W<tspan dy="4" font-size="0.75em">Q,K,V,O</tspan><tspan dy="-4">​</tspan> : 12 288 × 12 288</text> <circle cx="185" cy="302" r="12" fill="#fff" stroke="#555" stroke-width="1.5"></circle><text x="185" y="303" font-size="18">+</text> <rect x="70" y="322" width="230" height="26" rx="6" fill="#ffffff" stroke="#888780" stroke-width="1.5" /> <text x="185.0" y="335.0" font-weight="bold">LayerNorm</text> <rect x="70" y="362" width="230" height="60" rx="6" fill="#E3F4EE" stroke="#1D9E75" stroke-width="1.5" /> <text x="185.0" y="375.0" font-weight="bold">MLP (GELU)</text> <text x="185.0" y="392.0" font-size="12.5" fill="#444">12 288 → 49 152 → 12 288</text> <text x="185.0" y="409.0" font-size="12.5" fill="#444">par token, mêmes poids</text> <circle cx="185" cy="438" r="12" fill="#fff" stroke="#555" stroke-width="1.5"></circle><text x="185" y="439" font-size="18">+</text> <g font-size="11.5" fill="#666" font-style="italic"><text transform="translate(343,240) rotate(-90)">résiduel</text><text transform="translate(343,374) rotate(-90)">résiduel</text></g> <rect x="50" y="480" width="300" height="24" rx="6" fill="#ffffff" stroke="#888780" stroke-width="1.5" /> <text x="200.0" y="492.0" font-weight="bold">LayerNorm finale</text> <rect x="50" y="520" width="300" height="38" rx="6" fill="#FDF1DF" stroke="#EF9F27" stroke-width="1.5" /> <text x="200.0" y="530.5" font-weight="bold">Projection : W<tspan dy="4" font-size="0.75em">E</tspan><tspan dy="-4">​</tspan>ᵀ</text> <text x="200.0" y="547.5" font-size="12.5" fill="#444">12 288 × 50 257 (poids partagés)</text> <rect x="50" y="574" width="300" height="40" rx="6" fill="#FDF1DF" stroke="#EF9F27" stroke-width="1.5" /> <text x="200.0" y="585.5" font-weight="bold">Softmax</text> <text x="200.0" y="602.5" font-size="12.5" fill="#444">p(xₙ₊₁ | x₁, …, xₙ) sur 50 257 tokens</text>
+</svg>
+</div><div class="column" style="width:50%;">
+<div style="font-size: 80%;">
+<p><em>Brown et al., 2020</em> : <strong>même architecture que GPT-2</strong>, à une autre échelle.</p>
+<p><strong>Hyperparamètres :</strong></p>
+<ul>
+<li><span class="math inline">\(L = 96\)</span> blocs,</li>
+<li><span class="math inline">\(d_{model} = 12\,288\)</span> (dim embeddings),</li>
+<li><span class="math inline">\(h = 96\)</span> têtes de dimension <span class="math inline">\(128\)</span>,</li>
+<li><span class="math inline">\(d_{ff} = 49\,152\)</span> (dim poids MLP),</li>
+<li>vocabulaire <span class="math inline">\(|\mathcal{V}| = 50\,257\)</span>, contexte de <span class="math inline">\(2\,048\)</span> tokens.</li>
+</ul>
+<table class="caption-top">
+<thead>
+<tr class="header">
+<th>Composant</th>
+<th style="text-align: right;">Paramètres</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Embeddings de tokens (<span class="math inline">\(50\,257 \times 12\,288\)</span>)</td>
+<td style="text-align: right;">0,62 Md</td>
+</tr>
+<tr class="even">
+<td>Embeddings de positions (<span class="math inline">\(2\,048 \times 12\,288\)</span>)</td>
+<td style="text-align: right;">0,03 Md</td>
+</tr>
+<tr class="odd">
+<td>1 bloc (<span class="math inline">\(\approx 12 d^2\)</span>)</td>
+<td style="text-align: right;">1,81 Md</td>
+</tr>
+<tr class="even">
+<td><strong>96 blocs</strong></td>
+<td style="text-align: right;"><strong>173,96 Md</strong></td>
+</tr>
+<tr class="odd">
+<td><strong>Total</strong></td>
+<td style="text-align: right;"><strong><span class="math inline">\(\approx\)</span> 174,6 Md</strong></td>
+</tr>
+</tbody>
+</table>
+<div class="fragment">
+<p>Environ <strong>1 400 fois</strong> plus de paramètres que GPT-2 small, pour la même recette : 99,6 % des paramètres sont dans les blocs.</p>
+</div>
+</div>
+</div></div>
+<aside class="notes">
+<ul>
+<li>Hyperparamètres : tableau 2.1 de l’article GPT-3 ; <span class="math inline">\(d_{ff} = 4\,d_{model}\)</span> et <span class="math inline">\(n_{ctx} = 2\,048\)</span> sont donnés en section 2.1.</li>
+<li>Seule différence d’architecture avec GPT-2 : les couches alternent attention dense et attention creuse à bandes locales (comme le Sparse Transformer).</li>
+<li>Entraîné sur environ 300 Md de tokens. Les poids n’ont jamais été publiés : l’architecture n’est connue que par l’article.</li>
+</ul>
+<style type="text/css">
+span.MJX_Assistive_MathML {
+position:absolute!important;
+clip: rect(1px, 1px, 1px, 1px);
+padding: 1px 0 0 0!important;
+border: 0!important;
+height: 1px!important;
+width: 1px!important;
+overflow: hidden!important;
+display:block!important;
+}</style></aside>
+</section>
+<section class="slide level2 center">
+
 <h3 id="de-gpt-1-à-gpt-3-le-passage-à-léchelle">De GPT-1 à GPT-3 : le passage à l’échelle</h3>
 <table class="caption-top">
 <thead>
