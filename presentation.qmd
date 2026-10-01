@@ -57,7 +57,9 @@ format:
               });
             });
             </script>
-jupyter: huggingface            
+jupyter: huggingface
+execute:
+  cache: true            
 ---
 
 ---
@@ -279,7 +281,6 @@ La **tokenization** est le processus de découpage d'un texte en unités plus pe
 
 Texte : "Le chat dort."
 
-
 Tokens : ["Le", "ch", "at", "do", "rt", "."]
 
 Indices : [100, 21, 255, 183, 87, 47]
@@ -299,21 +300,6 @@ On a résolu les limitations des approches précédentes:
 - ne capture pas la similarité
 - faute d'orthographe
 :::
----
-
-```{python .code-overflow-wrap}
-#| code-fold: true
-#| code-summary: "Show the code"
-
-from transformers import AutoTokenizer
-
-tokenizer = AutoTokenizer.from_pretrained("bert-base-cased")
-phrase = "Orélien a eu recours à l'IA ?"
-print(phrase)
-print(f"Tokens associés -> {tokenizer.tokenize(phrase)}")
-print(f"input ids -> {tokenizer(phrase)["input_ids"]}")
-```
-
 
 
 ---
@@ -398,6 +384,175 @@ fig.update_layout(
 fig.show()
 ```
 
+---
+
+### Le perceptron multicouche : apprendre un embedding
+
+<svg viewBox="0 0 1000 430" width="100%" style="max-height:400px" role="img" aria-label="Perceptron multicouche produisant un embedding de mot" font-size="16" text-anchor="middle" dominant-baseline="central">
+<g stroke="#bbb" stroke-width="0.8">
+<line x1="165" y1="95" x2="385" y2="143"/>
+<line x1="165" y1="95" x2="385" y2="191"/>
+<line x1="165" y1="95" x2="385" y2="239"/>
+<line x1="165" y1="95" x2="385" y2="287"/>
+<line x1="165" y1="143" x2="385" y2="143"/>
+<line x1="165" y1="143" x2="385" y2="191"/>
+<line x1="165" y1="143" x2="385" y2="239"/>
+<line x1="165" y1="143" x2="385" y2="287"/>
+<line x1="165" y1="191" x2="385" y2="143"/>
+<line x1="165" y1="191" x2="385" y2="191"/>
+<line x1="165" y1="191" x2="385" y2="239"/>
+<line x1="165" y1="191" x2="385" y2="287"/>
+<line x1="165" y1="239" x2="385" y2="143"/>
+<line x1="165" y1="239" x2="385" y2="191"/>
+<line x1="165" y1="239" x2="385" y2="239"/>
+<line x1="165" y1="239" x2="385" y2="287"/>
+<line x1="165" y1="287" x2="385" y2="143"/>
+<line x1="165" y1="287" x2="385" y2="191"/>
+<line x1="165" y1="287" x2="385" y2="239"/>
+<line x1="165" y1="287" x2="385" y2="287"/>
+<line x1="165" y1="335" x2="385" y2="143"/>
+<line x1="165" y1="335" x2="385" y2="191"/>
+<line x1="165" y1="335" x2="385" y2="239"/>
+<line x1="165" y1="335" x2="385" y2="287"/>
+<line x1="415" y1="143" x2="595" y2="119"/>
+<line x1="415" y1="143" x2="595" y2="167"/>
+<line x1="415" y1="143" x2="595" y2="215"/>
+<line x1="415" y1="143" x2="595" y2="263"/>
+<line x1="415" y1="143" x2="595" y2="311"/>
+<line x1="415" y1="191" x2="595" y2="119"/>
+<line x1="415" y1="191" x2="595" y2="167"/>
+<line x1="415" y1="191" x2="595" y2="215"/>
+<line x1="415" y1="191" x2="595" y2="263"/>
+<line x1="415" y1="191" x2="595" y2="311"/>
+<line x1="415" y1="239" x2="595" y2="119"/>
+<line x1="415" y1="239" x2="595" y2="167"/>
+<line x1="415" y1="239" x2="595" y2="215"/>
+<line x1="415" y1="239" x2="595" y2="263"/>
+<line x1="415" y1="239" x2="595" y2="311"/>
+<line x1="415" y1="287" x2="595" y2="119"/>
+<line x1="415" y1="287" x2="595" y2="167"/>
+<line x1="415" y1="287" x2="595" y2="215"/>
+<line x1="415" y1="287" x2="595" y2="263"/>
+<line x1="415" y1="287" x2="595" y2="311"/>
+<line x1="625" y1="119" x2="815" y2="95"/>
+<line x1="625" y1="119" x2="815" y2="143"/>
+<line x1="625" y1="119" x2="815" y2="191"/>
+<line x1="625" y1="119" x2="815" y2="239"/>
+<line x1="625" y1="119" x2="815" y2="287"/>
+<line x1="625" y1="119" x2="815" y2="335"/>
+<line x1="625" y1="167" x2="815" y2="95"/>
+<line x1="625" y1="167" x2="815" y2="143"/>
+<line x1="625" y1="167" x2="815" y2="191"/>
+<line x1="625" y1="167" x2="815" y2="239"/>
+<line x1="625" y1="167" x2="815" y2="287"/>
+<line x1="625" y1="167" x2="815" y2="335"/>
+<line x1="625" y1="215" x2="815" y2="95"/>
+<line x1="625" y1="215" x2="815" y2="143"/>
+<line x1="625" y1="215" x2="815" y2="191"/>
+<line x1="625" y1="215" x2="815" y2="239"/>
+<line x1="625" y1="215" x2="815" y2="287"/>
+<line x1="625" y1="215" x2="815" y2="335"/>
+<line x1="625" y1="263" x2="815" y2="95"/>
+<line x1="625" y1="263" x2="815" y2="143"/>
+<line x1="625" y1="263" x2="815" y2="191"/>
+<line x1="625" y1="263" x2="815" y2="239"/>
+<line x1="625" y1="263" x2="815" y2="287"/>
+<line x1="625" y1="263" x2="815" y2="335"/>
+<line x1="625" y1="311" x2="815" y2="95"/>
+<line x1="625" y1="311" x2="815" y2="143"/>
+<line x1="625" y1="311" x2="815" y2="191"/>
+<line x1="625" y1="311" x2="815" y2="239"/>
+<line x1="625" y1="311" x2="815" y2="287"/>
+<line x1="625" y1="311" x2="815" y2="335"/>
+</g>
+<g stroke="#7F77DD" stroke-width="2.5">
+<line x1="165" y1="143" x2="385" y2="143"/>
+<line x1="165" y1="143" x2="385" y2="191"/>
+<line x1="165" y1="143" x2="385" y2="239"/>
+<line x1="165" y1="143" x2="385" y2="287"/>
+</g>
+<rect x="368" y="111" width="64" height="208" rx="10" fill="none" stroke="#7F77DD" stroke-width="2" stroke-dasharray="6 4"/>
+<g stroke-width="1.5">
+<circle cx="150" cy="95" r="15" fill="#F3F3F1" stroke="#888780"/>
+<circle cx="150" cy="143" r="15" fill="#7F77DD" stroke="#7F77DD"/>
+<circle cx="150" cy="191" r="15" fill="#F3F3F1" stroke="#888780"/>
+<circle cx="150" cy="239" r="15" fill="#F3F3F1" stroke="#888780"/>
+<circle cx="150" cy="287" r="15" fill="#F3F3F1" stroke="#888780"/>
+<circle cx="150" cy="335" r="15" fill="#F3F3F1" stroke="#888780"/>
+<circle cx="400" cy="143" r="15" fill="#EEEDFB" stroke="#7F77DD"/>
+<circle cx="400" cy="191" r="15" fill="#EEEDFB" stroke="#7F77DD"/>
+<circle cx="400" cy="239" r="15" fill="#EEEDFB" stroke="#7F77DD"/>
+<circle cx="400" cy="287" r="15" fill="#EEEDFB" stroke="#7F77DD"/>
+<circle cx="610" cy="119" r="15" fill="#E3F4EE" stroke="#1D9E75"/>
+<circle cx="610" cy="167" r="15" fill="#E3F4EE" stroke="#1D9E75"/>
+<circle cx="610" cy="215" r="15" fill="#E3F4EE" stroke="#1D9E75"/>
+<circle cx="610" cy="263" r="15" fill="#E3F4EE" stroke="#1D9E75"/>
+<circle cx="610" cy="311" r="15" fill="#E3F4EE" stroke="#1D9E75"/>
+<circle cx="830" cy="95" r="15" fill="#FDF1DF" stroke="#EF9F27"/>
+<circle cx="830" cy="143" r="15" fill="#FDF1DF" stroke="#EF9F27"/>
+<circle cx="830" cy="191" r="15" fill="#FDF1DF" stroke="#EF9F27"/>
+<circle cx="830" cy="239" r="15" fill="#FDF1DF" stroke="#EF9F27"/>
+<circle cx="830" cy="287" r="15" fill="#EF9F27" stroke="#EF9F27"/>
+<circle cx="830" cy="335" r="15" fill="#FDF1DF" stroke="#EF9F27"/>
+</g>
+<g font-size="14" fill="#222">
+<text x="150" y="95" fill="#222" font-weight="normal">0</text>
+<text x="150" y="143" fill="#fff" font-weight="bold">1</text>
+<text x="150" y="191" fill="#222" font-weight="normal">0</text>
+<text x="150" y="239" fill="#222" font-weight="normal">0</text>
+<text x="150" y="287" fill="#222" font-weight="normal">0</text>
+<text x="150" y="335" fill="#222" font-weight="normal">0</text>
+<text x="122" y="95" text-anchor="end" font-weight="normal">le</text>
+<text x="122" y="143" text-anchor="end" font-weight="bold">chat</text>
+<text x="122" y="191" text-anchor="end" font-weight="normal">chien</text>
+<text x="122" y="239" text-anchor="end" font-weight="normal">noir</text>
+<text x="122" y="287" text-anchor="end" font-weight="normal">dort</text>
+<text x="122" y="335" text-anchor="end" font-weight="normal">mange</text>
+<text x="858" y="95" text-anchor="start">le  0.01</text>
+<text x="858" y="143" text-anchor="start">chat  0.02</text>
+<text x="858" y="191" text-anchor="start">chien  0.01</text>
+<text x="858" y="239" text-anchor="start">noir  0.08</text>
+<text x="858" y="287" text-anchor="start" font-weight="bold">dort  0.55</text>
+<text x="858" y="335" text-anchor="start">mange  0.25</text>
+<text x="448" y="143" text-anchor="start" font-size="13" fill="#7F77DD" stroke="#fff" stroke-width="4" paint-order="stroke">0.8</text>
+<text x="448" y="191" text-anchor="start" font-size="13" fill="#7F77DD" stroke="#fff" stroke-width="4" paint-order="stroke">−0.3</text>
+<text x="448" y="239" text-anchor="start" font-size="13" fill="#7F77DD" stroke="#fff" stroke-width="4" paint-order="stroke">1.2</text>
+<text x="448" y="287" text-anchor="start" font-size="13" fill="#7F77DD" stroke="#fff" stroke-width="4" paint-order="stroke">0.1</text>
+</g>
+<g font-size="22" fill="#888"><text x="150" y="375">⋮</text><text x="830" y="375">⋮</text></g>
+<g font-weight="bold" fill="#333">
+<text x="150" y="30">Entrée : one-hot</text>
+<text x="400" y="30" fill="#7F77DD">Embedding</text>
+<text x="610" y="30">Couche cachée</text>
+<text x="830" y="30">Sortie : softmax</text>
+</g>
+<g font-size="14" fill="#555" font-style="italic">
+<text x="150" y="410">taille |V| (~ 50 000)</text>
+<text x="400" y="410">taille d (~ 300)</text>
+<text x="610" y="410">h = σ(e W<tspan dy="4" font-size="11">1</tspan><tspan dy="-4"> + b</tspan><tspan dy="4" font-size="11">1</tspan><tspan dy="-4">)</tspan></text>
+<text x="830" y="410">p(mot suivant | chat)</text>
+</g>
+<g font-size="17" fill="#333" font-weight="bold">
+<text x="275" y="62">W<tspan dy="5" font-size="12">E</tspan></text>
+<text x="505" y="62">W<tspan dy="5" font-size="12">1</tspan></text>
+<text x="720" y="62">W<tspan dy="5" font-size="12">2</tspan></text>
+</g>
+</svg>
+
+::: {.fragment}
+Le vecteur one-hot ne sélectionne qu'**une ligne** de $\mathbf{W}_E \in \mathbb{R}^{|\mathcal{V}| \times d}$ : 
+$\quad \mathbf{e}(\text{chat}) = \mathbf{1}_{\text{chat}}^\top \mathbf{W}_E = \mathbf{W}_E[\text{chat}, :] \in \mathbb{R}^d$
+:::
+
+::: {.fragment}
+On entraîne le réseau à **prédire le mot suivant** ; une fois l'entraînement terminé, on garde $\mathbf{W}_E$ : **chaque ligne est l'embedding d'un mot**.
+:::
+
+:::{.notes}
+- Modèle de langage neuronal de Bengio et al. (2003), idée reprise par word2vec (Mikolov et al., 2013).
+- Des mots qui apparaissent dans des contextes similaires (« chat », « chien ») doivent produire des prédictions similaires : leurs embeddings se rapprochent. C'est ce qu'on voit sur le graphique 3D précédent.
+- En pratique on ne multiplie jamais par le vecteur one-hot : on lit directement la ligne de $\mathbf{W}_E$ (une « table de correspondance »).
+:::
 
 
 # Le réseau de neurones récurrent
@@ -414,101 +569,6 @@ Un RNN traite les données **séquentiellement**, token par token, en maintenant
 
 ![RNN, issu de *Feng, Weijiang & Guan, Naiyang & Li, Yuan & Zhang, Xiang & Luo, Zhigang. (2017)*](images/The-standard-RNN-and-unfolded-RNN.png){width=80%}
 
-**Fonctionnement :**
-
-<button class="collapse-button">▶ Afficher les équations</button>
-<div class="collapse-content">
-À chaque étape $t$, le RNN met à jour son état caché :
-
-$$
-\mathbf{h}_t = \sigma(\mathbf{W}_{hh} \mathbf{h}_{t-1} + \mathbf{W}_{xh} \mathbf{x}_t + \mathbf{b}_h)
-$$
-
-- $\mathbf{x}_t$ : embedding du token à la position $t$
-- $\mathbf{h}_t$ : état caché (contexte accumulé jusqu'à la position $t$)
-- $\mathbf{W}_{hh}, \mathbf{W}_{xh}$ : poids du réseau
-- $\sigma$ : fonction d'activation (tanh, ReLU)
-</div>
-
-
-**Le problème central : le gradient qui s'évanouït**
-
-Lors du rétropropagation sur $T$ étapes :
-$$
-\frac{\partial L}{\partial \mathbf{W}_{hh}} = \sum_{t=1}^{T} \frac{\partial L_t}{\partial \mathbf{h}_T} \cdot \frac{\partial \mathbf{h}_T}{\partial \mathbf{h}_t} \cdots \frac{\partial \mathbf{h}_{t+1}}{\partial \mathbf{h}_t} \cdot \frac{\partial \mathbf{h}_t}{\partial \mathbf{W}_{hh}}
-$$
-
-La chaîne de produits $\frac{\partial \mathbf{h}_t}{\partial \mathbf{h}_{t-1}}$ contient des valeurs $< 1$ qui se multiplient, causant une **vanishing gradient** pour les dépendances lointaines.
-
-:::{.notes}
-- formule de dérivation de fonctions composées, dérivation en chaîne
-:::
-
----
-
-### LSTM (Long Short-Term Memory)
-
-::: {.callout-note title="Innovation"}
-Les LSTM introduisent des **portes** (gates) qui contrôlent le flux d'information, permettant aux gradients de "voyager" plus loin dans le temps.
-:::
-
-**Architecture :**
-
-Un LSTM maintient deux états :
-- $\mathbf{c}_t$ : **cell state** (mémoire long terme)
-- $\mathbf{h}_t$ : **hidden state** (mémoire court terme)
-
-Les mêmes limitations que pour le RNN apparaissent. 
-
-<button class="collapse-button">▶ Afficher les équations</button>
-<div class="collapse-content">
-Trois portes contrôlent les flux :
-
-$$
-\mathbf{f}_t = \sigma(\mathbf{W}_f \cdot [\mathbf{h}_{t-1}, \mathbf{x}_t] + \mathbf{b}_f) \quad \text{(forget gate)}
-$$
-$$
-\mathbf{i}_t = \sigma(\mathbf{W}_i \cdot [\mathbf{h}_{t-1}, \mathbf{x}_t] + \mathbf{b}_i) \quad \text{(input gate)}
-$$
-$$
-\mathbf{C}_t = \tanh(\mathbf{W}_c \cdot [\mathbf{h}_{t-1}, \mathbf{x}_t] + \mathbf{b}_c) \quad \text{(candidate state)}
-$$
-
-Mise à jour de la mémoire :
-$$
-\mathbf{c}_t = \mathbf{f}_t \odot \mathbf{c}_{t-1} + \mathbf{i}_t \odot \mathbf{C}_t
-$$
-
-$$
-\mathbf{h}_t = \mathbf{o}_t \odot \tanh(\mathbf{c}_t) \quad \text{où } \mathbf{o}_t = \sigma(\mathbf{W}_o \cdot [\mathbf{h}_{t-1}, \mathbf{x}_t] + \mathbf{b}_o)
-$$
-
-</div>
----
-
-### Limitations des RNN/LSTM
-
-::: {.callout-important}
-1. **Dépendances limitées même avec LSTM** : L'ordre séquentiel limite la capacité à modéliser des dépendances sur très long terme (>100-200 tokens)
-:::
-
-::: {.callout-important}
-2. **Pas de parallélisation** : Traiter les tokens un à un rend l'entraînement très lent sur GPU/TPU (impossible de traiter les positions en parallèle)
-:::
-
-::: {.callout-important}
-3. **Goulot d'étranglement informationnel** : L'état caché $\mathbf{h}_t$ doit encoder **toute** l'information pertinente des $t-1$ tokens précédents dans un vecteur de dimension fixe
-:::
-
-::: {.callout-important}
-4. **Inégalité positionnelle** : Les tokens au début d'une longue séquence ont moins d'influence sur les tokens à la fin (problème du **dilution de l'information**)
-:::
-
-**Exemple concret :**
-
-"Alice a parlé avec Bob. Ils ont discuté de nombreux sujets intéressants pendant trois heures. ... Finalement, **elle** a décidé de partir."
-
-Le pronom "elle" dépend d'Alice à 40+ tokens plus tôt, mais les LSTM peinent à maintenir cette relation.
 
 ---
 
@@ -516,20 +576,14 @@ Le pronom "elle" dépend d'Alice à 40+ tokens plus tôt, mais les LSTM peinent 
 
 **Résumé :**
 
-| Aspect | RNN/LSTM | Problème |
+| Aspect | RNN | Problème |
 |--------|----------|---------|
 | **Dépendances long terme** | ❌ Limitées | Gradients qui s'évanouissent |
 | **Parallélisation** | ❌ Séquentiel | Pas d'accélération GPU efficace |
 | **Mémoire** | ❌ Goulot | État caché de taille fixe |
 | **Scalabilité** | ❌ Lente | Entraînement très long |
 
-**C'est ici qu'interviennent les Transformers ! 🚀**
-
-Ils éliminent la nature séquentielle en utilisant le **mécanisme d'attention**, qui permet :
-- ✅ Accès **direct** à tous les tokens (pas de goulot d'étranglement)
-- ✅ **Parallélisation complète** de toutes les positions
-- ✅ Dépendances **sans limite de distance** (théoriquement)
-- ✅ Entraînement **jusqu'à 100x plus rapide**
+**Comment résoudre ces problèmes ?**
 
 
 ---
@@ -772,37 +826,6 @@ $$
 
 ---
 
-### Encodage positionnel : les solutions
-
-**1. Sinusoïdal** (Transformer original, 2017) : $\mathbf{p}_t$ est fixé, pour $i = 0, \dots, d_{model}/2 - 1$ :
-
-$$
-p_{t, 2i} = \sin(\omega_i t), \qquad p_{t, 2i+1} = \cos(\omega_i t), \qquad \omega_i = \frac{1}{10000^{2i/d_{model}}}
-$$
-
-Chaque paire de coordonnées tourne à une fréquence différente, comme les aiguilles d'une horloge.
-
-::: {.fragment}
-**Propriété :** la position $t + k$ s'obtient à partir de $t$ par une **rotation** qui ne dépend que de $k$ :
-
-$$
-\begin{pmatrix} \sin(\omega_i (t+k)) \\ \cos(\omega_i (t+k)) \end{pmatrix}
-=
-\begin{pmatrix} \cos(\omega_i k) & \sin(\omega_i k) \\ -\sin(\omega_i k) & \cos(\omega_i k) \end{pmatrix}
-\begin{pmatrix} \sin(\omega_i t) \\ \cos(\omega_i t) \end{pmatrix}
-$$
-
-Le modèle peut donc facilement raisonner en **position relative**.
-:::
-
-::: {.fragment}
-**2. Appris** (GPT, BERT) : $\mathbf{p}_1, \dots, \mathbf{p}_{n_{max}}$ sont des paramètres, estimés comme les embeddings. Limite : pas de séquence plus longue que $n_{max}$.
-
-**3. Rotatif, *RoPE*** (Llama, Mistral...) : on applique la rotation directement à $\mathbf{q}_t$ et $\mathbf{k}_s$, de sorte que le score $\mathbf{q}_t^\top \mathbf{k}_s$ ne dépende que de $t - s$.
-:::
-
----
-
 ### Un bloc Transformer
 
 Un bloc = **attention multi-têtes** + **MLP**, chacun suivi d'une **connexion résiduelle** et d'une **normalisation**.
@@ -835,9 +858,13 @@ Un bloc = **attention multi-têtes** + **MLP**, chacun suivi d'une **connexion r
 <text transform="translate(266,411) rotate(-90)">résiduel</text><text transform="translate(266,211) rotate(-90)">résiduel</text>
 </g>
 </svg>
+
 :::
 
+
 ::: {.column width="65%"}
+
+
 $$
 \begin{aligned}
 \mathbf{H} &= \text{LayerNorm}\big(\mathbf{X} + \text{MultiHead}(\mathbf{X})\big) \\
@@ -845,13 +872,15 @@ $$
 \end{aligned}
 $$
 
+
 - **Attention** : les tokens **échangent** de l'information entre eux
 - **MLP** : chaque token est transformé **indépendamment**, avec les mêmes poids
 - **Entrée et sortie ont la même taille** $n \times d_{model}$ : on peut **empiler** $L$ blocs (12 pour GPT-2 small, 96 pour GPT-3)
 :::
 ::::
 
-<button class="collapse-button">▶ Afficher les équations</button>
+
+<button class="collapse-button">▶ Détails</button>
 <div class="collapse-content">
 **MLP** (appliqué à chaque ligne $\mathbf{h} \in \mathbb{R}^{d_{model}}$ de $\mathbf{H}$) :
 $$
@@ -873,31 +902,6 @@ où $\boldsymbol{\gamma}, \boldsymbol{\beta} \in \mathbb{R}^{d_{model}}$ sont ap
 - On retrouve le MLP vu plus tôt dans la présentation.
 :::
 
----
-
-### Connexions résiduelles : pourquoi ça marche
-
-Chaque sous-couche calcule $\mathbf{y} = \mathbf{x} + F(\mathbf{x})$ au lieu de $\mathbf{y} = F(\mathbf{x})$.
-
-::: {.fragment}
-Pour une pile de $L$ blocs $\mathbf{x}_{l+1} = \mathbf{x}_l + F_l(\mathbf{x}_l)$, la dérivation en chaîne donne :
-
-$$
-\frac{\partial \mathbf{x}_L}{\partial \mathbf{x}_0} = \prod_{l=0}^{L-1} \left(\mathbf{I} + \frac{\partial F_l}{\partial \mathbf{x}_l}\right) = \mathbf{I} + \sum_{l} \frac{\partial F_l}{\partial \mathbf{x}_l} + \dots
-$$
-:::
-
-::: {.fragment}
-::: {.callout-note}
-Le terme $\mathbf{I}$ garantit que le gradient **atteint toujours les premières couches**, même si les $\frac{\partial F_l}{\partial \mathbf{x}_l}$ sont petits.
-
-À comparer avec le RNN : $\frac{\partial \mathbf{h}_T}{\partial \mathbf{h}_t} = \prod \frac{\partial \mathbf{h}_{s+1}}{\partial \mathbf{h}_s}$, un produit de petits termes qui **s'évanouit**.
-:::
-:::
-
-::: {.fragment}
-**Interprétation :** le vecteur $\mathbf{x}_l$ est un « flux résiduel » que chaque bloc **enrichit** par petites touches, plutôt que de le recalculer entièrement.
-:::
 
 ---
 
@@ -922,7 +926,7 @@ $$
 :::
 
 ::: {.fragment}
-Les **deux tiers** des paramètres sont dans les MLP : on pense qu'ils stockent une grande partie des « connaissances » du modèle.
+Les **deux tiers** des paramètres sont dans les MLP.
 :::
 
 ---
@@ -953,30 +957,14 @@ La matrice $\mathbf{Q}\mathbf{K}^\top \in \mathbb{R}^{n \times n}$ a un coût **
 
 *Attention Is All You Need* (Vaswani et al., 2017), conçu pour la **traduction** :
 
-:::: {.columns}
-::: {.column width="50%"}
-**Encodeur** (lit la phrase source)
+![Encodeur-Decodeur pour la traduction, credits *Vaswani et al., 2017*](images/transformer_architecture.png){width=300%}
 
-- Tokens → embeddings + positions
-- $L$ blocs d'auto-attention **bidirectionnelle** : chaque token voit **toute** la phrase
-- Sortie : $\mathbf{Z} \in \mathbb{R}^{n \times d_{model}}$, une représentation contextuelle de chaque token source
-:::
 
-::: {.column width="50%"}
-**Décodeur** (écrit la traduction)
 
-- Auto-attention **masquée** : un token ne voit que les tokens **précédents**
-- **Attention croisée** : les requêtes viennent du décodeur, les clés et valeurs de l'encodeur
-- Sortie : probabilité du **prochain token**
-:::
-::::
-
-::: {.fragment}
 ::: {.callout-tip title="Trois familles"}
 - **Encodeur seul** → BERT (comprendre un texte)
 - **Décodeur seul** → GPT (générer du texte)
 - **Encodeur + décodeur** → T5, BART (transformer un texte en un autre)
-:::
 :::
 
 ---
@@ -988,9 +976,10 @@ Pour **générer** du texte, le modèle ne doit pas « tricher » en regardant l
 On ajoute un masque $\mathbf{M} \in \mathbb{R}^{n \times n}$ **avant** la softmax :
 
 $$
-\text{Attention}(\mathbf{Q}, \mathbf{K}, \mathbf{V}) = \text{softmax}\left(\frac{\mathbf{Q}\mathbf{K}^\top}{\sqrt{d_k}} + \mathbf{M}\right)\mathbf{V},
-\qquad
-M_{ij} = \begin{cases} 0 & \text{si } j \leq i \\ -\infty & \text{si } j > i \end{cases}
+\begin{align*}
+\text{Attention}(\mathbf{Q}, \mathbf{K}, \mathbf{V}) &= \text{softmax}\left(\frac{\mathbf{Q}\mathbf{K}^\top}{\sqrt{d_k}} + \mathbf{M}\right)\mathbf{V},\\
+\text{ avec } \quad M_{ij} & = \begin{cases} 0 & \text{si } j \leq i \\ -\infty & \text{si } j > i \end{cases}
+\end{align*}
 $$
 
 ::: {.fragment}
@@ -1035,14 +1024,14 @@ L'évolution des modèles de langage reposant sur les transformers s'accompagne 
 Une architecture GPT correspond uniquement à la partie **décodeur** du Transformer avec $L$ blocs à **attention masquée**.
 :::
 
-**Modèle de langage :** on veut estimer la probabilité d'un texte $(x_1, \dots, x_T)$. Par la formule des probabilités composées (exacte, sans hypothèse) :
+**Modèle de langage :** on veut estimer la probabilité d'un texte $(x_1, \dots, x_T)$. Par la formule de Bayes :
 
 $$
 p(x_1, \dots, x_T) = \prod_{t=1}^{T} p(x_t \mid x_1, \dots, x_{t-1})
 $$
 
 ::: {.fragment}
-GPT modélise chaque facteur $p_\theta(x_t \mid x_{<t})$ : **prédire le prochain token** sachant les précédents.
+GPT modélise chaque facteur $p_\theta(x_t \mid x_{<t})$ = **prédire le prochain token** sachant les précédents.
 
 C'est exactement ce que permet le masque causal : la sortie à la position $t-1$ ne voit que $x_1, \dots, x_{t-1}$.
 :::
@@ -1133,19 +1122,16 @@ Le modèle ne « planifie » pas sa réponse : il prédit **un token à la fois*
 
 **Même architecture**, on augmente seulement la taille du modèle et des données.
 
-::: {.fragment}
-::: {.callout-note title="Lois d'échelle (Kaplan et al., 2020)"}
+::: {.callout-note title="Lois d'échelle (*Kaplan et al., 2020*)"}
 La perte de test décroît comme une **loi de puissance** du nombre de paramètres $N$ (données et calcul suffisants) :
 $$
 \mathcal{L}(N) \approx \left(\frac{N_c}{N}\right)^{\alpha_N}, \qquad \alpha_N \approx 0.076
 $$
 Même type de loi pour la taille des données et la puissance de calcul : les performances sont **prévisibles**, ce qui a justifié d'investir dans des modèles toujours plus grands.
 :::
-:::
 
-::: {.fragment}
-Avec GPT-3 apparaît l'**apprentissage en contexte** (*in-context learning*) : le modèle résout une nouvelle tâche à partir de quelques exemples donnés dans le prompt, **sans modifier ses paramètres**.
-:::
+
+
 
 
 # Des LLM aux agents
@@ -1208,6 +1194,7 @@ $$
 <text x="205" y="288" font-size="12">ajouté au contexte</text><text x="68" y="250" text-anchor="start">si terminé</text>
 </g>
 </svg>
+
 :::
 
 ::: {.column width="60%"}
@@ -1297,35 +1284,145 @@ $$
 On retrouve les **embeddings** du début de la présentation : des textes proches en sens ont des vecteurs proches.
 :::
 
----
-
-### Multi-agents et limites
-
-**Systèmes multi-agents :** un agent **orchestrateur** découpe la tâche et la confie à des **sous-agents** spécialisés, qui travaillent en parallèle et lui renvoient un résumé.
-
-- Chaque sous-agent a **son propre contexte** → on dépasse la limite d'une seule fenêtre
-- Ils communiquent en **texte** : consignes de l'orchestrateur, rapports des sous-agents
-
-::: {.fragment}
-**Limites :**
-
-- **Coût** : chaque tour relit tout le contexte, des centaines de milliers de tokens pour une tâche
-- **Sécurité** : un texte malveillant lu par l'agent (page web, mail) peut contenir des instructions (*injection de prompt*)
-:::
-
-::: {.fragment}
-::: {.callout-important}
-D'où l'importance de **vérifier** (tests, relecture) et de garder un **humain dans la boucle** pour les actions irréversibles.
-:::
-:::
-
 
 # Fin de la présentation
 
 
 
 
+---
 
+### LSTM (Long Short-Term Memory)
+
+::: {.callout-note title="Innovation"}
+Les LSTM introduisent des **portes** (gates) qui contrôlent le flux d'information, permettant aux gradients de "voyager" plus loin dans le temps.
+:::
+
+**Architecture :**
+
+Un LSTM maintient deux états :
+- $\mathbf{c}_t$ : **cell state** (mémoire long terme)
+- $\mathbf{h}_t$ : **hidden state** (mémoire court terme)
+
+Les mêmes limitations que pour le RNN apparaissent. 
+
+<button class="collapse-button">▶ Afficher les équations</button>
+<div class="collapse-content">
+Trois portes contrôlent les flux :
+
+$$
+\mathbf{f}_t = \sigma(\mathbf{W}_f \cdot [\mathbf{h}_{t-1}, \mathbf{x}_t] + \mathbf{b}_f) \quad \text{(forget gate)}
+$$
+$$
+\mathbf{i}_t = \sigma(\mathbf{W}_i \cdot [\mathbf{h}_{t-1}, \mathbf{x}_t] + \mathbf{b}_i) \quad \text{(input gate)}
+$$
+$$
+\mathbf{C}_t = \tanh(\mathbf{W}_c \cdot [\mathbf{h}_{t-1}, \mathbf{x}_t] + \mathbf{b}_c) \quad \text{(candidate state)}
+$$
+
+Mise à jour de la mémoire :
+$$
+\mathbf{c}_t = \mathbf{f}_t \odot \mathbf{c}_{t-1} + \mathbf{i}_t \odot \mathbf{C}_t
+$$
+
+$$
+\mathbf{h}_t = \mathbf{o}_t \odot \tanh(\mathbf{c}_t) \quad \text{où } \mathbf{o}_t = \sigma(\mathbf{W}_o \cdot [\mathbf{h}_{t-1}, \mathbf{x}_t] + \mathbf{b}_o)
+$$
+
+</div>
+---
+
+### Limitations des RNN/LSTM
+
+::: {.callout-important}
+1. **Dépendances limitées même avec LSTM** : L'ordre séquentiel limite la capacité à modéliser des dépendances sur très long terme (>100-200 tokens)
+:::
+
+::: {.callout-important}
+2. **Pas de parallélisation** : Traiter les tokens un à un rend l'entraînement très lent sur GPU/TPU (impossible de traiter les positions en parallèle)
+:::
+
+::: {.callout-important}
+3. **Goulot d'étranglement informationnel** : L'état caché $\mathbf{h}_t$ doit encoder **toute** l'information pertinente des $t-1$ tokens précédents dans un vecteur de dimension fixe
+:::
+
+::: {.callout-important}
+4. **Inégalité positionnelle** : Les tokens au début d'une longue séquence ont moins d'influence sur les tokens à la fin (problème du **dilution de l'information**)
+:::
+
+**Exemple concret :**
+
+"Alice a parlé avec Bob. Ils ont discuté de nombreux sujets intéressants pendant trois heures. ... Finalement, **elle** a décidé de partir."
+
+Le pronom "elle" dépend d'Alice à 40+ tokens plus tôt, mais les LSTM peinent à maintenir cette relation.
+
+
+---
+
+### Encodage positionnel : les solutions
+
+**1. Sinusoïdal** (*Vaswani et al., 2017*) : $\mathbf{p}_t$ est fixé, pour $i = 0, \dots, d_{model}/2 - 1$ :
+
+$$
+p_{t, 2i} = \sin(\omega_i t), \qquad p_{t, 2i+1} = \cos(\omega_i t), \qquad \omega_i = \frac{1}{10000^{2i/d_{model}}}
+$$
+
+Chaque paire de coordonnées tourne à une fréquence différente, comme les aiguilles d'une horloge.
+
+::: {.fragment}
+**Propriété :** la position $t + k$ s'obtient à partir de $t$ par une **rotation** qui ne dépend que de $k$ :
+
+$$
+\begin{pmatrix} \sin(\omega_i (t+k)) \\ \cos(\omega_i (t+k)) \end{pmatrix}
+=
+\begin{pmatrix} \cos(\omega_i k) & \sin(\omega_i k) \\ -\sin(\omega_i k) & \cos(\omega_i k) \end{pmatrix}
+\begin{pmatrix} \sin(\omega_i t) \\ \cos(\omega_i t) \end{pmatrix}
+$$
+
+Le modèle peut donc facilement raisonner en **position relative**.
+:::
+
+::: {.fragment}
+**2. Appris** (GPT, BERT) : $\mathbf{p}_1, \dots, \mathbf{p}_{n_{max}}$ sont des paramètres, estimés comme les embeddings. Limite : pas de séquence plus longue que $n_{max}$.
+
+**3. Rotatif, *RoPE*** (Llama, Mistral...) : on applique la rotation directement à $\mathbf{q}_t$ et $\mathbf{k}_s$, de sorte que le score $\mathbf{q}_t^\top \mathbf{k}_s$ ne dépende que de $t - s$.
+:::
+
+:::{.notes}
+**Que représentent $t$ et $i$ ?**
+
+- $t$ : la **position du token** dans la séquence ($t = 0$ pour le premier token, $t = 1$ pour le deuxième, etc.). Chaque position $t$ a son propre vecteur $\mathbf{p}_t \in \mathbb{R}^{d_{model}}$.
+- $i$ : l'**indice d'une paire de coordonnées** de $\mathbf{p}_t$, avec $i = 0, \dots, d_{model}/2 - 1$. La coordonnée paire $2i$ reçoit un sinus, la coordonnée impaire $2i+1$ un cosinus, tous deux à la même fréquence $\omega_i$.
+- $\omega_i$ décroît avec $i$ : de $\omega_0 = 1$ (oscillation rapide) jusqu'à environ $1/10000$ (oscillation très lente).
+- Exemple avec $d_{model} = 4$ : $\mathbf{p}_t = \big(\sin t,\ \cos t,\ \sin(t/100),\ \cos(t/100)\big)$.
+- Analogie de l'horloge : les premières coordonnées sont la trotteuse (elles changent beaucoup d'un token au suivant et distinguent les positions voisines), les dernières sont l'aiguille des heures (elles évoluent lentement et distinguent les positions éloignées).
+:::
+
+---
+
+### Connexions résiduelles : pourquoi ça marche
+
+Chaque sous-couche calcule $\mathbf{y} = \mathbf{x} + F(\mathbf{x})$ au lieu de $\mathbf{y} = F(\mathbf{x})$.
+
+::: {.fragment}
+Pour une pile de $L$ blocs $\mathbf{x}_{l+1} = \mathbf{x}_l + F_l(\mathbf{x}_l)$, la dérivation en chaîne donne :
+
+$$
+\frac{\partial \mathbf{x}_L}{\partial \mathbf{x}_0} = \prod_{l=0}^{L-1} \left(\mathbf{I} + \frac{\partial F_l}{\partial \mathbf{x}_l}\right) = \mathbf{I} + \sum_{l} \frac{\partial F_l}{\partial \mathbf{x}_l} + \dots
+$$
+:::
+
+::: {.fragment}
+::: {.callout-note}
+Le terme $\mathbf{I}$ garantit que le gradient **atteint toujours les premières couches**, même si les $\frac{\partial F_l}{\partial \mathbf{x}_l}$ sont petits.
+
+À comparer avec le RNN : $\frac{\partial \mathbf{h}_T}{\partial \mathbf{h}_t} = \prod \frac{\partial \mathbf{h}_{s+1}}{\partial \mathbf{h}_s}$, un produit de petits termes qui **s'évanouit**.
+:::
+:::
+
+::: {.fragment}
+**Interprétation :** le vecteur $\mathbf{x}_l$ est un « flux résiduel » que chaque bloc **enrichit** par petites touches, plutôt que de le recalculer entièrement.
+:::
 
 
 

@@ -74,3 +74,61 @@ $$
 L_{\mathcal{B}_t}(\theta_t) = \frac{1}{|\mathcal{B}_t|} \sum_{i \in \mathcal{B}_t} L_i(\theta_t)
 $$
 
+
+
+
+
+**Fonctionnement :**
+
+<button class="collapse-button">▶ Afficher les équations</button>
+<div class="collapse-content">
+À chaque étape $t$, le RNN met à jour son état caché :
+
+$$
+\mathbf{h}_t = \sigma(\mathbf{W}_{hh} \mathbf{h}_{t-1} + \mathbf{W}_{xh} \mathbf{x}_t + \mathbf{b}_h)
+$$
+
+- $\mathbf{x}_t$ : embedding du token à la position $t$
+- $\mathbf{h}_t$ : état caché (contexte accumulé jusqu'à la position $t$)
+- $\mathbf{W}_{hh}, \mathbf{W}_{xh}$ : poids du réseau
+- $\sigma$ : fonction d'activation (tanh, ReLU)
+</div>
+
+
+**Le problème central : le gradient qui s'évanouït**
+
+Lors du rétropropagation sur $T$ étapes :
+$$
+\frac{\partial L}{\partial \mathbf{W}_{hh}} = \sum_{t=1}^{T} \frac{\partial L_t}{\partial \mathbf{h}_T} \cdot \frac{\partial \mathbf{h}_T}{\partial \mathbf{h}_t} \cdots \frac{\partial \mathbf{h}_{t+1}}{\partial \mathbf{h}_t} \cdot \frac{\partial \mathbf{h}_t}{\partial \mathbf{W}_{hh}}
+$$
+
+La chaîne de produits $\frac{\partial \mathbf{h}_t}{\partial \mathbf{h}_{t-1}}$ contient des valeurs $< 1$ qui se multiplient, causant une **vanishing gradient** pour les dépendances lointaines.
+
+:::{.notes}
+- formule de dérivation de fonctions composées, dérivation en chaîne
+:::
+
+# Architecture complète du transformer 
+
+<button class="collapse-button">▶ Détails</button>
+<div class="collapse-content">
+
+:::: {.columns}
+::: {.column width="50%"}
+**Encodeur** (lit la phrase source)
+
+- Tokens → embeddings + positions
+- $L$ blocs d'auto-attention **bidirectionnelle** : chaque token voit **toute** la phrase
+- Sortie : $\mathbf{Z} \in \mathbb{R}^{n \times d_{model}}$, une représentation contextuelle de chaque token source
+:::
+
+::: {.column width="50%"}
+**Décodeur** (écrit la traduction)
+
+- Auto-attention **masquée** : un token ne voit que les tokens **précédents**
+- **Attention croisée** : les requêtes viennent du décodeur, les clés et valeurs de l'encodeur
+- Sortie : probabilité du **prochain token**
+:::
+::::
+
+</div>
