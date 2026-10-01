@@ -45,6 +45,14 @@ format:
                   const content = this.nextElementSibling;
                   content.classList.toggle('show');
                   this.textContent = content.classList.contains('show') ? '▼ Masquer' : '▶ Afficher';
+                  // MathJax ne sait pas mesurer les formules cachées : on les re-rend une fois visibles
+                  if (content.classList.contains('show') && window.MathJax) {
+                    if (MathJax.Hub) {
+                      MathJax.Hub.Queue(["Typeset", MathJax.Hub, content], ["Rerender", MathJax.Hub, content]);
+                    } else if (MathJax.typesetPromise) {
+                      MathJax.typesetPromise([content]);
+                    }
+                  }
                 });
               });
             });
@@ -392,7 +400,7 @@ fig.show()
 
 
 
-# Une révolution : le mécanisme d'attention
+# Le réseau de neurones récurrent
 
 
 ---
@@ -403,9 +411,10 @@ fig.show()
 Un RNN traite les données **séquentiellement**, token par token, en maintenant un **état caché** qui encode l'information des tokens précédents.
 :::
 
-**Fonctionnement :**
 
 ![RNN, issu de *Feng, Weijiang & Guan, Naiyang & Li, Yuan & Zhang, Xiang & Luo, Zhigang. (2017)*](images/The-standard-RNN-and-unfolded-RNN.png){width=80%}
+
+**Fonctionnement :**
 
 <button class="collapse-button">▶ Afficher les équations</button>
 <div class="collapse-content">
@@ -603,8 +612,25 @@ Il existe plusieurs variantes du mécanisme d'attention, notamment :
 
 - Attention *dot-product* : $\text{score}(\mathbf{q}, \mathbf{k}_i) = \mathbf{q}^\top \mathbf{k}_i$
 - Attention *scaled dot-product* : $\text{score}(\mathbf{q}, \mathbf{k}_i) = \frac{\mathbf{q}^\top \mathbf{k}_i}{\sqrt{d_k}}$
-- Attention multi-têtes (multi-head attention) que l'on verra plus tard.
 
+<button class="collapse-button">▶ Pourquoi diviser par $\sqrt{d_k}</button>
+<div class="collapse-content">
+Supposons que les coordonnées de $\mathbf{q}$ et $\mathbf{k}$ soient indépendantes, de moyenne $0$ et de variance $1$. Alors :
+
+$$
+\mathbb{E}\left[\mathbf{q}^\top \mathbf{k}\right] = \sum_{j=1}^{d_k} \mathbb{E}[q_j]\,\mathbb{E}[k_j] = 0,
+\qquad
+\text{Var}\left(\mathbf{q}^\top \mathbf{k}\right) = \sum_{j=1}^{d_k} \text{Var}(q_j k_j) = d_k 
+$$
+
+**Conséquence :** avec $d_k = 64$, les scores sont de l'ordre de $\pm 8$, et la softmax devient presque un $\arg\max$ :
+
+$
+\text{softmax}(8, 0, -8) \approx (0.9997,\ 0.0003,\ 0.0000)
+$
+Les dérivées de la softmax sont alors quasi nulles : **le gradient ne passe plus**.
+</div>
+- Attention multi-têtes (multi-head attention) que l'on verra plus tard.
 
 :::{.notes}
 Etapé 1 - Calcul du score : pr chaque position $i$, la scalaire $e_i$ indique la compatibilité, ou pertinence, ou similarité, de la requête $\mathbf{q}$ avec la clé $\mathbf{k}_i$.
@@ -613,6 +639,7 @@ Etapé 2 - Application de la softmax : les scores sont normalisés pour obtenir 
 
 Etapé 3 - Combinaison des valeurs : les valeurs $\mathbf{v}_i$ sont pondérées par les poids d'attention $\alpha_i$ pour obtenir la représentation finale de la requête.
 
+- Rappel : la dérivée de la softmax est $\frac{\partial \alpha_i}{\partial e_j} = \alpha_i(\delta_{ij} - \alpha_j)$, qui tend vers 0 quand un des $\alpha$ tend vers 1.
 :::
 
 ---
@@ -666,38 +693,6 @@ avec $\theta = \{\mathbf{W}_Q, \mathbf{W}_K, \mathbf{W}_V\}$.
 
 # Du mécanisme d'attention au Transformer
 
----
-
-### Pourquoi diviser par $\sqrt{d_k}$ ?
-
-Supposons que les coordonnées de $\mathbf{q}$ et $\mathbf{k}$ soient indépendantes, de moyenne $0$ et de variance $1$. Alors :
-
-$$
-\mathbb{E}\left[\mathbf{q}^\top \mathbf{k}\right] = \sum_{j=1}^{d_k} \mathbb{E}[q_j]\,\mathbb{E}[k_j] = 0,
-\qquad
-\text{Var}\left(\mathbf{q}^\top \mathbf{k}\right) = \sum_{j=1}^{d_k} \text{Var}(q_j k_j) = d_k
-$$
-
-::: {.fragment}
-**Conséquence :** avec $d_k = 64$, les scores sont de l'ordre de $\pm 8$, et la softmax devient presque un $\arg\max$ :
-
-$$
-\text{softmax}(8, 0, -8) \approx (0.9997,\ 0.0003,\ 0.0000)
-$$
-
-Les dérivées de la softmax sont alors quasi nulles : **le gradient ne passe plus**.
-:::
-
-::: {.fragment}
-::: {.callout-note title="Solution"}
-En divisant par $\sqrt{d_k}$, on ramène la variance des scores à $1$ :
-$\text{Var}\left(\frac{\mathbf{q}^\top \mathbf{k}}{\sqrt{d_k}}\right) = 1$, quelle que soit la dimension.
-:::
-:::
-
-:::{.notes}
-- Rappel : la dérivée de la softmax est $\frac{\partial \alpha_i}{\partial e_j} = \alpha_i(\delta_{ij} - \alpha_j)$, qui tend vers 0 quand un des $\alpha$ tend vers 1.
-:::
 
 ---
 
